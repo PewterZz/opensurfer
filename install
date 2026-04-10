@@ -348,6 +348,10 @@ download_and_install() {
 
     mv "$tmp_dir/opensurfer" "$INSTALL_DIR"
     chmod 755 "${INSTALL_DIR}/opensurfer"
+    # Remove macOS quarantine flag so Gatekeeper doesn't block unsigned binaries
+    if [[ "$(uname)" == "Darwin" ]]; then
+        xattr -d com.apple.quarantine "${INSTALL_DIR}/opensurfer" 2>/dev/null || true
+    fi
     rm -rf "$tmp_dir"
 }
 
@@ -355,6 +359,9 @@ install_from_binary() {
     print_message info "\n${MUTED}Installing ${NC}opensurfer ${MUTED}from: ${NC}$binary_path"
     cp "$binary_path" "${INSTALL_DIR}/opensurfer"
     chmod 755 "${INSTALL_DIR}/opensurfer"
+    if [[ "$(uname)" == "Darwin" ]]; then
+        xattr -d com.apple.quarantine "${INSTALL_DIR}/opensurfer" 2>/dev/null || true
+    fi
 }
 
 if [ -n "$binary_path" ]; then
@@ -559,64 +566,50 @@ add_to_path() {
 
 XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-$HOME/.config}
 
-current_shell=$(basename "$SHELL")
-case $current_shell in
-    fish)
-        config_files="$HOME/.config/fish/config.fish"
-    ;;
-    zsh)
-        config_files="${ZDOTDIR:-$HOME}/.zshrc ${ZDOTDIR:-$HOME}/.zshenv $XDG_CONFIG_HOME/zsh/.zshrc $XDG_CONFIG_HOME/zsh/.zshenv"
-    ;;
-    bash)
-        config_files="$HOME/.bashrc $HOME/.bash_profile $HOME/.profile $XDG_CONFIG_HOME/bash/.bashrc $XDG_CONFIG_HOME/bash/.bash_profile"
-    ;;
-    ash)
-        config_files="$HOME/.ashrc $HOME/.profile /etc/profile"
-    ;;
-    sh)
-        config_files="$HOME/.ashrc $HOME/.profile /etc/profile"
-    ;;
-    *)
-        # Default case if none of the above matches
-        config_files="$HOME/.bashrc $HOME/.bash_profile $XDG_CONFIG_HOME/bash/.bashrc $XDG_CONFIG_HOME/bash/.bash_profile"
-    ;;
-esac
-
 if [[ "$no_modify_path" != "true" ]]; then
-    config_file=""
-    for file in $config_files; do
-        if [[ -f $file ]]; then
-            config_file=$file
+    # Write PATH export to every shell config that exists on this system
+    any_written=false
+
+    # zsh
+    for file in "${ZDOTDIR:-$HOME}/.zshrc" "${ZDOTDIR:-$HOME}/.zshenv" "$XDG_CONFIG_HOME/zsh/.zshrc" "$XDG_CONFIG_HOME/zsh/.zshenv"; do
+        if [[ -f "$file" ]]; then
+            add_to_path "$file" "export PATH=$INSTALL_DIR:\$PATH"
+            any_written=true
             break
         fi
     done
 
-    if [[ -z $config_file ]]; then
-        print_message warning "No config file found for $current_shell. You may need to manually add to PATH:"
+    # bash
+    for file in "$HOME/.bashrc" "$HOME/.bash_profile" "$HOME/.profile" "$XDG_CONFIG_HOME/bash/.bashrc" "$XDG_CONFIG_HOME/bash/.bash_profile"; do
+        if [[ -f "$file" ]]; then
+            add_to_path "$file" "export PATH=$INSTALL_DIR:\$PATH"
+            any_written=true
+            break
+        fi
+    done
+
+    # fish — create config.fish if fish is installed but the file doesn't exist yet
+    if command -v fish &>/dev/null; then
+        mkdir -p "$HOME/.config/fish"
+        touch "$HOME/.config/fish/config.fish"
+        add_to_path "$HOME/.config/fish/config.fish" "fish_add_path $INSTALL_DIR"
+        any_written=true
+    fi
+
+    # ash/sh fallback (only if no other config was written)
+    if [[ "$any_written" != "true" ]]; then
+        for file in "$HOME/.ashrc" "$HOME/.profile" "/etc/profile"; do
+            if [[ -f "$file" ]]; then
+                add_to_path "$file" "export PATH=$INSTALL_DIR:\$PATH"
+                any_written=true
+                break
+            fi
+        done
+    fi
+
+    if [[ "$any_written" != "true" ]]; then
+        print_message warning "No shell config file found. Manually add to PATH:"
         print_message info "  export PATH=$INSTALL_DIR:\$PATH"
-    elif [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
-        case $current_shell in
-            fish)
-                add_to_path "$config_file" "fish_add_path $INSTALL_DIR"
-            ;;
-            zsh)
-                add_to_path "$config_file" "export PATH=$INSTALL_DIR:\$PATH"
-            ;;
-            bash)
-                add_to_path "$config_file" "export PATH=$INSTALL_DIR:\$PATH"
-            ;;
-            ash)
-                add_to_path "$config_file" "export PATH=$INSTALL_DIR:\$PATH"
-            ;;
-            sh)
-                add_to_path "$config_file" "export PATH=$INSTALL_DIR:\$PATH"
-            ;;
-            *)
-                export PATH=$INSTALL_DIR:$PATH
-                print_message warning "Manually add the directory to $config_file (or similar):"
-                print_message info "  export PATH=$INSTALL_DIR:\$PATH"
-            ;;
-        esac
     fi
 fi
 
