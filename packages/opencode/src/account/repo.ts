@@ -38,7 +38,7 @@ export namespace AccountRepo {
   }
 }
 
-export class AccountRepo extends ServiceMap.Service<AccountRepo, AccountRepo.Service>()("@opencode/AccountRepo") {
+export class AccountRepo extends ServiceMap.Service<AccountRepo, AccountRepo.Service>()("@opensurfer/AccountRepo") {
   static readonly layer: Layer.Layer<AccountRepo> = Layer.effect(
     AccountRepo,
     Effect.gen(function* () {

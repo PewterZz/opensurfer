@@ -41,7 +41,7 @@ export namespace Bus {
     readonly subscribeAllCallback: (callback: (event: any) => unknown) => Effect.Effect<() => void>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/Bus") {}
+  export class Service extends ServiceMap.Service<Service, Interface>()("@opensurfer/Bus") {}
 
   export const layer = Layer.effect(
     Service,

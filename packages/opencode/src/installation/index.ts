@@ -58,7 +58,7 @@ export namespace Installation {
 
   export const VERSION = version
   export const CHANNEL = channel
-  export const USER_AGENT = `opencode/${CHANNEL}/${VERSION}/${Flag.OPENCODE_CLIENT}`
+  export const USER_AGENT = `opensurfer/${CHANNEL}/${VERSION}/${Flag.OPENSURFER_CLIENT}`
 
   export function isPreview() {
     return CHANNEL !== "latest"
@@ -91,7 +91,7 @@ export namespace Installation {
     readonly upgrade: (method: Method, target: string) => Effect.Effect<void, UpgradeFailedError>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/Installation") {}
+  export class Service extends ServiceMap.Service<Service, Interface>()("@opensurfer/Installation") {}
 
   export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | ChildProcessSpawner.ChildProcessSpawner> =
     Layer.effect(
@@ -146,7 +146,7 @@ export namespace Installation {
 
         const upgradeCurl = Effect.fnUntraced(
           function* (target: string) {
-            const response = yield* httpOk.execute(HttpClientRequest.get("https://opencode.ai/install"))
+            const response = yield* httpOk.execute(HttpClientRequest.get("https://raw.githubusercontent.com/PewterZz/opensurfer/dev/install"))
             const body = yield* response.text
             const bodyBytes = new TextEncoder().encode(body)
             const proc = ChildProcess.make("bash", [], {
@@ -167,7 +167,7 @@ export namespace Installation {
         )
 
         const methodImpl = Effect.fn("Installation.method")(function* () {
-          if (process.execPath.includes(path.join(".opencode", "bin"))) return "curl" as Method
+          if (process.execPath.includes(path.join(".opensurfer", "bin"))) return "curl" as Method
           if (process.execPath.includes(path.join(".local", "bin"))) return "curl" as Method
           const exec = process.execPath.toLowerCase()
 

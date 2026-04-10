@@ -239,7 +239,7 @@ export namespace MCP {
     readonly getAuthStatus: (mcpName: string) => Effect.Effect<AuthStatus>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/MCP") {}
+  export class Service extends ServiceMap.Service<Service, Interface>()("@opensurfer/MCP") {}
 
   export const layer = Layer.effect(
     Service,

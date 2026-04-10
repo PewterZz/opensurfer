@@ -1,14 +1,18 @@
-- Search the web using Exa AI - performs real-time web searches and can scrape content from specific URLs
-- Provides up-to-date information for current events and recent data
-- Supports configurable result counts and returns the content from the most relevant websites
-- Use this tool for accessing information beyond knowledge cutoff
-- Searches are performed automatically within a single API call
+- Search the web for current information on any topic
+- Returns titles, URLs, and snippets from the most relevant pages
+- Works out of the box via Bing + DuckDuckGo (parallel, deduplicated) — no setup required
+- Set OPENSURFER_SEARCH_URL to a SearXNG instance for higher quality results
 
-Usage notes:
-  - Supports live crawling modes: 'fallback' (backup if cached unavailable) or 'preferred' (prioritize live crawling)
-  - Search types: 'auto' (balanced), 'fast' (quick results), 'deep' (comprehensive search)
-  - Configurable context length for optimal LLM integration
-  - Domain filtering and advanced search options available
+Query tips for better results:
+  - Use specific, literal terms — not paraphrases or full sentences
+  - Quote exact phrases: `"error message" library name`
+  - Add the year for time-sensitive topics: "feature X release 2026"
+  - Include library/framework names and version numbers for technical queries
+  - If the first search misses, rephrase with a different angle — never repeat the same query
 
-The current year is {{year}}. You MUST use this year when searching for recent information or current events
-- Example: If the current year is 2026 and the user asks for "latest AI news", search for "AI news 2026", NOT "AI news 2025"
+After getting results:
+  - Use webfetch to read the full content of 1–2 key pages when snippets aren't enough
+  - Prefer primary sources (official docs, original papers) over aggregators
+  - Always cite source URLs in your response
+
+The current year is {{year}}. Use this when searching for recent information.

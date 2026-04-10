@@ -66,7 +66,7 @@ export namespace Storage {
     readonly list: (prefix: string[]) => Effect.Effect<string[][], AppFileSystem.Error>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/Storage") {}
+  export class Service extends ServiceMap.Service<Service, Interface>()("@opensurfer/Storage") {}
 
   function file(dir: string, key: string[]) {
     return path.join(dir, ...key) + ".json"

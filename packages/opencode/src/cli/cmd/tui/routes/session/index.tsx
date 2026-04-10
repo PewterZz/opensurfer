@@ -160,6 +160,11 @@ export function Session() {
   const [animationsEnabled, setAnimationsEnabled] = kv.signal("animations_enabled", true)
   const [showGenericToolOutput, setShowGenericToolOutput] = kv.signal("generic_tool_output_visibility", false)
 
+  const [collectedLinks, setCollectedLinks] = createSignal<Array<{ title: string; url: string }>>([])
+  const [activeTab, setActiveTab] = createSignal<"agent" | "links">("agent")
+  const hasLinks = createMemo(() => collectedLinks().length > 0)
+
+
   const wide = createMemo(() => dimensions().width > 120)
   const sidebarVisible = createMemo(() => {
     if (session()?.parentID) return false
@@ -208,6 +213,15 @@ export function Session() {
     } else if (part.tool === "plan_enter") {
       local.agent.set("plan")
       lastSwitch = part.id
+    } else if (part.tool === "websearch") {
+      const urls = (part.state as any).metadata?.urls as Array<{ title: string; url: string }> | undefined
+      if (urls?.length) {
+        setCollectedLinks((prev) => {
+          const existing = new Set(prev.map((u) => u.url))
+          const newUrls = urls.filter((u) => !existing.has(u.url))
+          return newUrls.length ? [...prev, ...newUrls] : prev
+        })
+      }
     }
   })
 
@@ -267,6 +281,13 @@ export function Session() {
     if (!session()?.parentID) return
     if (keybind.match("app_exit", evt)) {
       exit()
+    }
+  })
+
+  useKeyboard((evt) => {
+    if (session()?.parentID) return
+    if (evt.ctrl && evt.key === "l" && hasLinks()) {
+      setActiveTab((t) => (t === "links" ? "agent" : "links"))
     }
   })
 
@@ -1027,6 +1048,7 @@ export function Session() {
     }
   })
 
+
   // snap to bottom when session changes
   createEffect(on(() => route.sessionID, toBottom))
 
@@ -1051,6 +1073,13 @@ export function Session() {
       <box flexDirection="row">
         <box flexGrow={1} paddingBottom={1} paddingLeft={2} paddingRight={2} gap={1}>
           <Show when={session()}>
+            <Switch>
+              <Match when={activeTab() === "links"}>
+                <LinksTab
+                  links={collectedLinks()}
+                />
+              </Match>
+              <Match when={true}>
             <scrollbox
               ref={(r) => (scroll = r)}
               viewportOptions={{
@@ -1166,7 +1195,26 @@ export function Session() {
                 )}
               </For>
             </scrollbox>
+              </Match>
+            </Switch>
             <box flexShrink={0}>
+              <Show when={hasLinks() && !session()?.parentID}>
+                <box flexDirection="row" height={1} gap={3} paddingLeft={1} marginBottom={0}>
+                  <text
+                    fg={activeTab() === "agent" ? theme.text : theme.textMuted}
+                    onMouseUp={() => setActiveTab("agent")}
+                  >
+                    {activeTab() === "agent" ? "▸ Agent" : "  Agent"}
+                  </text>
+                  <text
+                    fg={activeTab() === "links" ? theme.accent : theme.textMuted}
+                    onMouseUp={() => setActiveTab("links")}
+                  >
+                    {activeTab() === "links" ? "▸ Links" : "  Links"} ({collectedLinks().length})
+                  </text>
+                  <text fg={theme.textMuted}>ctrl+l</text>
+                </box>
+              </Show>
               <Show when={permissions().length > 0}>
                 <PermissionPrompt request={permissions()[0]} />
               </Show>
@@ -1470,7 +1518,7 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
     <Show when={props.part.text.trim()}>
       <box id={"text-" + props.part.id} paddingLeft={3} marginTop={1} flexShrink={0}>
         <Switch>
-          <Match when={Flag.OPENCODE_EXPERIMENTAL_MARKDOWN}>
+          <Match when={Flag.OPENSURFER_EXPERIMENTAL_MARKDOWN}>
             <markdown
               syntaxStyle={syntax()}
               streaming={true}
@@ -1480,7 +1528,7 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
               bg={theme.background}
             />
           </Match>
-          <Match when={!Flag.OPENCODE_EXPERIMENTAL_MARKDOWN}>
+          <Match when={!Flag.OPENSURFER_EXPERIMENTAL_MARKDOWN}>
             <code
               filetype="markdown"
               drawUnstyledText={false}
@@ -1944,9 +1992,13 @@ function List(props: ToolProps<typeof ListTool>) {
 }
 
 function WebFetch(props: ToolProps<typeof WebFetchTool>) {
+  const url = (props.input as any).url as string
+  const hostname = (u: string) => {
+    try { return new URL(u).hostname.replace(/^www\./, "") } catch { return u }
+  }
   return (
-    <InlineTool icon="%" pending="Fetching from the web..." complete={(props.input as any).url} part={props.part}>
-      WebFetch {(props.input as any).url}
+    <InlineTool icon="⊕" pending="Fetching page..." complete={url} part={props.part}>
+      {hostname(url)}
     </InlineTool>
   )
 }
@@ -1961,13 +2013,231 @@ function CodeSearch(props: ToolProps<any>) {
   )
 }
 
+const GLOBE_FRAMES = ["🌍", "🌎", "🌏", "🌎"]
+const WAVE_FRAMES = [
+  "Searching·   ",
+  "Searching··  ",
+  "Searching··· ",
+  "Searching····",
+  "Searching ···",
+  "Searching  ··",
+  "Searching   ·",
+  "Searching    ",
+]
+
 function WebSearch(props: ToolProps<any>) {
+  const { theme } = useTheme()
+  const kv = useKV()
   const input = props.input as any
-  const metadata = props.metadata as any
+
+  const isRunning = createMemo(() => props.part.state.status === "running")
+  const isCompleted = createMemo(() => props.part.state.status === "completed")
+
+  const completedMeta = createMemo(() =>
+    isCompleted() ? (props.part.state as any).metadata ?? {} : {},
+  )
+
+  const urls = createMemo(() => {
+    const u = completedMeta().urls as Array<{ title: string; url: string }> | undefined
+    return u ?? []
+  })
+
+  const hostname = (url: string) => {
+    try {
+      return new URL(url).hostname.replace(/^www\./, "")
+    } catch {
+      return url
+    }
+  }
+
   return (
-    <InlineTool icon="◈" pending="Searching web..." complete={input.query} part={props.part}>
-      Exa Web Search "{input.query}" <Show when={metadata.numResults}>({metadata.numResults} results)</Show>
-    </InlineTool>
+    <>
+      <box marginTop={0} paddingLeft={3}>
+        <Show
+          when={isRunning()}
+          fallback={
+            <text paddingLeft={3} fg={theme.textMuted}>
+              ~ {input.query}
+            </text>
+          }
+        >
+          <Show
+            when={kv.get("animations_enabled", true)}
+            fallback={
+              <text paddingLeft={3} fg={theme.text}>
+                ~ Searching {input.query}
+              </text>
+            }
+          >
+            <box flexDirection="row" gap={1} paddingLeft={3}>
+              <spinner frames={GLOBE_FRAMES} interval={300} color={theme.primary} />
+              <spinner frames={WAVE_FRAMES} interval={120} color={theme.text} />
+            </box>
+          </Show>
+        </Show>
+      </box>
+      <Show when={isCompleted() && urls().length > 0}>
+        <box paddingLeft={6} flexDirection="column">
+          <For each={urls().slice(0, 6)}>
+            {(u) => (
+              <text fg={theme.textMuted}>
+                <span fg={theme.accent}>·</span> {hostname(u.url)}
+              </text>
+            )}
+          </For>
+        </box>
+      </Show>
+    </>
+  )
+}
+
+function LinksTab(props: {
+  links: Array<{ title: string; url: string }>
+}) {
+  const { theme } = useTheme()
+  const [selected, setSelected] = createSignal<{ title: string; url: string } | null>(null)
+  const [pageContent, setPageContent] = createSignal<string | null>(null)
+  const [loading, setLoading] = createSignal(false)
+  const [hovered, setHovered] = createSignal<string | null>(null)
+
+  const hostname = (url: string) => {
+    try { return new URL(url).hostname.replace(/^www\./, "") } catch { return url }
+  }
+
+  /** Reader-mode HTML → compact plain text. Extracts article/main body first. */
+  function stripHtml(html: string): string {
+    // Strip script/style/comments before any other processing
+    let h = html
+      .replace(/<script[\s\S]*?<\/script>/gi, "")
+      .replace(/<style[\s\S]*?<\/style>/gi, "")
+      .replace(/<!--[\s\S]*?-->/g, "")
+      .replace(/<noscript[\s\S]*?<\/noscript>/gi, "")
+
+    // Extract main content block — avoids nav/sidebar/footer noise contributing blank lines
+    const contentMatch =
+      h.match(/<article[^>]*>([\s\S]*?)<\/article>/i) ??
+      h.match(/<main[^>]*>([\s\S]*?)<\/main>/i) ??
+      h.match(/<[a-z\d]+[^>]+role=["']main["'][^>]*>([\s\S]*?)<\/[a-z\d]+>/i) ??
+      h.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
+    if (contentMatch) h = contentMatch[1]
+
+    return h
+      // Strip noise blocks
+      .replace(/<nav[\s\S]*?<\/nav>/gi, "")
+      .replace(/<header[\s\S]*?<\/header>/gi, "")
+      .replace(/<footer[\s\S]*?<\/footer>/gi, "")
+      .replace(/<aside[\s\S]*?<\/aside>/gi, "")
+      .replace(/<figure[\s\S]*?<\/figure>/gi, "")
+      .replace(/<img[^>]+>/gi, "")
+      .replace(/<video[\s\S]*?<\/video>/gi, "")
+      .replace(/<audio[\s\S]*?<\/audio>/gi, "")
+      // Headings
+      .replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, (_, t) => `\n# ${t.replace(/<[^>]+>/g, "").trim()}\n`)
+      .replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, (_, t) => `\n## ${t.replace(/<[^>]+>/g, "").trim()}\n`)
+      .replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, (_, t) => `\n### ${t.replace(/<[^>]+>/g, "").trim()}\n`)
+      .replace(/<h[456][^>]*>([\s\S]*?)<\/h[456]>/gi, (_, t) => `\n#### ${t.replace(/<[^>]+>/g, "").trim()}\n`)
+      // Links — keep label text only, drop URLs (cleaner reading)
+      .replace(/<a[^>]*>([\s\S]*?)<\/a>/gi, (_, text) => text.replace(/<[^>]+>/g, "").trim())
+      // Bold/italic
+      .replace(/<(b|strong)[^>]*>([\s\S]*?)<\/(b|strong)>/gi, (_, _t, txt) => `**${txt.replace(/<[^>]+>/g, "")}**`)
+      .replace(/<(i|em)[^>]*>([\s\S]*?)<\/(i|em)>/gi, (_, _t, txt) => `_${txt.replace(/<[^>]+>/g, "")}_`)
+      // Lists — bullet prefix, single newline per item
+      .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, (_, t) => `• ${t.replace(/<[^>]+>/g, "").trim()}\n`)
+      // Block boundaries — single newline (not double; divs are everywhere)
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/p>/gi, "\n")
+      .replace(/<\/blockquote>/gi, "\n")
+      .replace(/<hr[^>]*>/gi, "\n────────────────────\n")
+      // Strip all remaining tags
+      .replace(/<[^>]+>/g, "")
+      // Decode HTML entities
+      .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, " ")
+      .replace(/&#x27;/g, "'").replace(/&#x2F;/g, "/").replace(/&mdash;/g, "—")
+      .replace(/&ndash;/g, "–").replace(/&hellip;/g, "…")
+      // Collapse inline whitespace then trim blank lines
+      .replace(/[ \t]+/g, " ")
+      .replace(/\n[ \t]+/g, "\n")
+      .replace(/[ \t]+\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim()
+  }
+
+  async function openLink(link: { title: string; url: string }) {
+    setSelected(link)
+    setPageContent(null)
+    setLoading(true)
+    try {
+      const response = await fetch(link.url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+          Accept: "text/html,application/xhtml+xml,text/plain;q=0.8,*/*;q=0.5",
+        },
+      })
+      const html = await response.text()
+      setPageContent(stripHtml(html) || "(no content)")
+    } catch (e) {
+      setPageContent(`Failed to load: ${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Switch>
+      <Match when={selected()}>
+        <box flexGrow={1} flexDirection="column">
+          <box height={1} flexDirection="row" gap={2} paddingLeft={1}>
+            <text fg={theme.accent} onMouseUp={() => { setSelected(null); setPageContent(null) }}>← back</text>
+            <text fg={theme.textMuted}>{hostname(selected()!.url)}</text>
+            <text fg={theme.textMuted}>{selected()!.title}</text>
+          </box>
+
+          <Show when={loading()}>
+            <box paddingLeft={2} paddingTop={1}>
+              <text fg={theme.textMuted}>Loading...</text>
+            </box>
+          </Show>
+
+          <Show when={!loading() && pageContent() !== null}>
+            <scrollbox flexGrow={1}>
+              <box paddingLeft={2} paddingRight={2} paddingTop={1} paddingBottom={2}>
+                <text fg={theme.text}>{pageContent()!}</text>
+              </box>
+            </scrollbox>
+          </Show>
+        </box>
+      </Match>
+
+      <Match when={true}>
+        <scrollbox flexGrow={1}>
+          <box paddingLeft={1} paddingBottom={1}>
+            <text fg={theme.textMuted}>{props.links.length} source{props.links.length !== 1 ? "s" : ""}</text>
+          </box>
+          <For each={props.links}>
+            {(link) => (
+              <box
+                paddingLeft={1}
+                paddingRight={2}
+                paddingBottom={1}
+                onMouseOver={() => setHovered(link.url)}
+                onMouseOut={() => setHovered(null)}
+                onMouseUp={() => openLink(link)}
+                backgroundColor={hovered() === link.url ? theme.backgroundElement : undefined}
+              >
+                <box flexDirection="row" gap={1}>
+                  <text fg={theme.textMuted}>·</text>
+                  <text fg={hovered() === link.url ? theme.text : theme.accent}>
+                    {link.title || hostname(link.url)}
+                  </text>
+                </box>
+                <text fg={theme.textMuted} paddingLeft={2}>{hostname(link.url)}</text>
+              </box>
+            )}
+          </For>
+        </scrollbox>
+      </Match>
+    </Switch>
   )
 }
 

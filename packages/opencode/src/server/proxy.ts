@@ -20,8 +20,8 @@ type Msg = string | ArrayBuffer | Uint8Array
 function headers(req: Request, extra?: HeadersInit) {
   const out = new Headers(req.headers)
   for (const key of hop) out.delete(key)
-  out.delete("x-opencode-directory")
-  out.delete("x-opencode-workspace")
+  out.delete("x-opensurfer-directory")
+  out.delete("x-opensurfer-workspace")
   if (!extra) return out
   for (const [key, value] of new Headers(extra).entries()) {
     out.set(key, value)
@@ -56,7 +56,7 @@ const app = (upgrade: UpgradeWebSocket) =>
   new Hono().get(
     "/__workspace_ws",
     upgrade((c) => {
-      const url = c.req.header("x-opencode-proxy-url")
+      const url = c.req.header("x-opensurfer-proxy-url")
       const queue: Msg[] = []
       let remote: WebSocket | undefined
       return {
@@ -120,7 +120,7 @@ export namespace ServerProxy {
     url.pathname = "/__workspace_ws"
     url.search = ""
     const next = new Headers(req.headers)
-    next.set("x-opencode-proxy-url", socket(target.url))
+    next.set("x-opensurfer-proxy-url", socket(target.url))
     return app(upgrade).fetch(
       new Request(url, {
         method: req.method,

@@ -104,7 +104,7 @@ export namespace Question {
     readonly list: () => Effect.Effect<Request[]>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/Question") {}
+  export class Service extends ServiceMap.Service<Service, Interface>()("@opensurfer/Question") {}
 
   export const layer = Layer.effect(
     Service,

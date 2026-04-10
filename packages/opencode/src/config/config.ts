@@ -72,14 +72,14 @@ export namespace Config {
   }
 
   export function managedConfigDir() {
-    return process.env.OPENCODE_TEST_MANAGED_CONFIG_DIR || systemManagedConfigDir()
+    return process.env.OPENSURFER_TEST_MANAGED_CONFIG_DIR || systemManagedConfigDir()
   }
 
   const managedDir = managedConfigDir()
 
-  const MANAGED_PLIST_DOMAIN = "ai.opencode.managed"
+  const MANAGED_PLIST_DOMAIN = "ai.opensurfer.managed"
 
-  // Keys injected by macOS/MDM into the managed plist that are not OpenCode config
+  // Keys injected by macOS/MDM into the managed plist that are not OpenSurfer config
   const PLIST_META = new Set([
     "PayloadDisplayName",
     "PayloadIdentifier",
@@ -90,7 +90,7 @@ export namespace Config {
   ])
 
   /**
-   * Parse raw JSON (from plutil conversion of a managed plist) into OpenCode config.
+   * Parse raw JSON (from plutil conversion of a managed plist) into OpenSurfer config.
    * Strips MDM metadata keys before parsing through the config schema.
    * Pure function — no OS interaction, safe to unit test directly.
    */
@@ -222,7 +222,7 @@ export namespace Config {
       })
       if (!md) continue
 
-      const patterns = ["/.opencode/command/", "/.opencode/commands/", "/command/", "/commands/"]
+      const patterns = ["/.opensurfer/command/", "/.opensurfer/commands/", "/.opensurfer/command/", "/.opensurfer/commands/", "/command/", "/commands/"]
       const file = rel(item, patterns) ?? path.basename(item)
       const name = trim(file)
 
@@ -261,7 +261,7 @@ export namespace Config {
       })
       if (!md) continue
 
-      const patterns = ["/.opencode/agent/", "/.opencode/agents/", "/agent/", "/agents/"]
+      const patterns = ["/.opensurfer/agent/", "/.opensurfer/agents/", "/.opensurfer/agent/", "/.opensurfer/agents/", "/agent/", "/agents/"]
       const file = rel(item, patterns) ?? path.basename(item)
       const agentName = trim(file)
 
@@ -1126,10 +1126,10 @@ export namespace Config {
     readonly waitForDependencies: () => Effect.Effect<void>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/Config") {}
+  export class Service extends ServiceMap.Service<Service, Interface>()("@opensurfer/Config") {}
 
   function globalConfigFile() {
-    const candidates = ["opencode.jsonc", "opencode.json", "config.json"].map((file) =>
+    const candidates = ["opensurfer.jsonc", "opensurfer.json", "opencode.jsonc", "opencode.json", "config.json"].map((file) =>
       path.join(Global.Path.config, file),
     )
     for (const file of candidates) {
@@ -1283,8 +1283,10 @@ export namespace Config {
           let result: Info = pipe(
             {},
             mergeDeep(yield* loadFile(path.join(Global.Path.config, "config.json"))),
-            mergeDeep(yield* loadFile(path.join(Global.Path.config, "opencode.json"))),
-            mergeDeep(yield* loadFile(path.join(Global.Path.config, "opencode.jsonc"))),
+            mergeDeep(yield* loadFile(path.join(Global.Path.config, "opensurfer.json"))),
+            mergeDeep(yield* loadFile(path.join(Global.Path.config, "opensurfer.jsonc"))),
+            mergeDeep(yield* loadFile(path.join(Global.Path.config, "opensurfer.json"))),
+            mergeDeep(yield* loadFile(path.join(Global.Path.config, "opensurfer.jsonc"))),
           )
 
           const legacy = path.join(Global.Path.config, "config")
@@ -1329,7 +1331,7 @@ export namespace Config {
 
           const scope = (source: string): PluginScope => {
             if (source.startsWith("http://") || source.startsWith("https://")) return "global"
-            if (source === "OPENCODE_CONFIG_CONTENT") return "local"
+            if (source === "OPENSURFER_CONFIG_CONTENT") return "local"
             if (Instance.containsPath(source)) return "local"
             return "global"
           }
@@ -1375,12 +1377,12 @@ export namespace Config {
           const global = yield* getGlobal()
           merge(Global.Path.config, global, "global")
 
-          if (Flag.OPENCODE_CONFIG) {
-            merge(Flag.OPENCODE_CONFIG, yield* loadFile(Flag.OPENCODE_CONFIG))
-            log.debug("loaded custom config", { path: Flag.OPENCODE_CONFIG })
+          if (Flag.OPENSURFER_CONFIG) {
+            merge(Flag.OPENSURFER_CONFIG, yield* loadFile(Flag.OPENSURFER_CONFIG))
+            log.debug("loaded custom config", { path: Flag.OPENSURFER_CONFIG })
           }
 
-          if (!Flag.OPENCODE_DISABLE_PROJECT_CONFIG) {
+          if (!Flag.OPENSURFER_DISABLE_PROJECT_CONFIG) {
             for (const file of yield* Effect.promise(() =>
               ConfigPaths.projectFiles("opencode", ctx.directory, ctx.worktree),
             )) {
@@ -1394,15 +1396,15 @@ export namespace Config {
 
           const directories = yield* Effect.promise(() => ConfigPaths.directories(ctx.directory, ctx.worktree))
 
-          if (Flag.OPENCODE_CONFIG_DIR) {
-            log.debug("loading config from OPENCODE_CONFIG_DIR", { path: Flag.OPENCODE_CONFIG_DIR })
+          if (Flag.OPENSURFER_CONFIG_DIR) {
+            log.debug("loading config from OPENSURFER_CONFIG_DIR", { path: Flag.OPENSURFER_CONFIG_DIR })
           }
 
           const deps: Promise<void>[] = []
 
           for (const dir of unique(directories)) {
-            if (dir.endsWith(".opencode") || dir === Flag.OPENCODE_CONFIG_DIR) {
-              for (const file of ["opencode.json", "opencode.jsonc"]) {
+            if (dir.endsWith(".opensurfer") || dir.endsWith(".opensurfer") || dir === Flag.OPENSURFER_CONFIG_DIR) {
+              for (const file of ["opensurfer.json", "opensurfer.jsonc", "opencode.json", "opencode.jsonc"]) {
                 const source = path.join(dir, file)
                 log.debug(`loading config from ${source}`)
                 merge(source, yield* loadFile(source))
@@ -1427,14 +1429,14 @@ export namespace Config {
             track(dir, list)
           }
 
-          if (process.env.OPENCODE_CONFIG_CONTENT) {
-            const source = "OPENCODE_CONFIG_CONTENT"
-            const next = yield* loadConfig(process.env.OPENCODE_CONFIG_CONTENT, {
+          if (process.env.OPENSURFER_CONFIG_CONTENT) {
+            const source = "OPENSURFER_CONFIG_CONTENT"
+            const next = yield* loadConfig(process.env.OPENSURFER_CONFIG_CONTENT, {
               dir: ctx.directory,
               source,
             })
             merge(source, next, "local")
-            log.debug("loaded custom config from OPENCODE_CONFIG_CONTENT")
+            log.debug("loaded custom config from OPENSURFER_CONFIG_CONTENT")
           }
 
           const activeOrg = Option.getOrUndefined(
@@ -1447,8 +1449,8 @@ export namespace Config {
                 { concurrency: 2 },
               )
               if (Option.isSome(tokenOpt)) {
-                process.env["OPENCODE_CONSOLE_TOKEN"] = tokenOpt.value
-                Env.set("OPENCODE_CONSOLE_TOKEN", tokenOpt.value)
+                process.env["OPENSURFER_CONSOLE_TOKEN"] = tokenOpt.value
+                Env.set("OPENSURFER_CONSOLE_TOKEN", tokenOpt.value)
               }
 
               activeOrgName = activeOrg.org.name
@@ -1475,7 +1477,7 @@ export namespace Config {
           }
 
           if (existsSync(managedDir)) {
-            for (const file of ["opencode.json", "opencode.jsonc"]) {
+            for (const file of ["opensurfer.json", "opensurfer.jsonc", "opencode.json", "opencode.jsonc"]) {
               const source = path.join(managedDir, file)
               merge(source, yield* loadFile(source), "global")
             }
@@ -1493,8 +1495,8 @@ export namespace Config {
             })
           }
 
-          if (Flag.OPENCODE_PERMISSION) {
-            result.permission = mergeDeep(result.permission ?? {}, JSON.parse(Flag.OPENCODE_PERMISSION))
+          if (Flag.OPENSURFER_PERMISSION) {
+            result.permission = mergeDeep(result.permission ?? {}, JSON.parse(Flag.OPENSURFER_PERMISSION))
           }
 
           if (result.tools) {
@@ -1516,10 +1518,10 @@ export namespace Config {
             result.share = "auto"
           }
 
-          if (Flag.OPENCODE_DISABLE_AUTOCOMPACT) {
+          if (Flag.OPENSURFER_DISABLE_AUTOCOMPACT) {
             result.compaction = { ...result.compaction, auto: false }
           }
-          if (Flag.OPENCODE_DISABLE_PRUNE) {
+          if (Flag.OPENSURFER_DISABLE_PRUNE) {
             result.compaction = { ...result.compaction, prune: false }
           }
 

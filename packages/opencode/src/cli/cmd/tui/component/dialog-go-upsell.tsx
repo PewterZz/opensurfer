@@ -6,7 +6,7 @@ import { selectedForeground, useTheme } from "@tui/context/theme"
 import { useDialog, type DialogContext } from "@tui/ui/dialog"
 import { Link } from "@tui/ui/link"
 
-const GO_URL = "https://opencode.ai/go"
+const GO_URL = "https://github.com/PewterZz/opensurfer"
 
 export type DialogGoUpsellProps = {
   onClose?: (dontShowAgain?: boolean) => void
@@ -51,7 +51,7 @@ export function DialogGoUpsell(props: DialogGoUpsellProps) {
       </box>
       <box gap={1} paddingBottom={1}>
         <text fg={theme.textMuted}>
-          Subscribe to OpenCode Go to keep going with reliable access to the best open-source models, starting at
+          Subscribe to OpenSurfer Go to keep going with reliable access to the best open-source models, starting at
           $5/month.
         </text>
         <box flexDirection="row" gap={1}>

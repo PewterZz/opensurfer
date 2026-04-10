@@ -164,7 +164,7 @@ export namespace Worktree {
     readonly reset: (input: ResetInput) => Effect.Effect<boolean>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/Worktree") {}
+  export class Service extends ServiceMap.Service<Service, Interface>()("@opensurfer/Worktree") {}
 
   type GitResult = { code: number; text: string; stderr: string }
 
@@ -205,7 +205,7 @@ export namespace Worktree {
         const ctx = yield* InstanceState.context
         for (const attempt of Array.from({ length: MAX_NAME_ATTEMPTS }, (_, i) => i)) {
           const name = base ? (attempt === 0 ? base : `${base}-${Slug.create()}`) : Slug.create()
-          const branch = `opencode/${name}`
+          const branch = `opensurfer/${name}`
           const directory = pathSvc.join(root, name)
 
           if (yield* fs.exists(directory).pipe(Effect.orDie)) continue

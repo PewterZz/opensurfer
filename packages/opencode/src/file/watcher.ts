@@ -18,7 +18,7 @@ import { FileIgnore } from "./ignore"
 import { Protected } from "./protected"
 import { Log } from "../util/log"
 
-declare const OPENCODE_LIBC: string | undefined
+declare const OPENSURFER_LIBC: string | undefined
 
 export namespace FileWatcher {
   const log = Log.create({ service: "file.watcher" })
@@ -37,7 +37,7 @@ export namespace FileWatcher {
   const watcher = lazy((): typeof import("@parcel/watcher") | undefined => {
     try {
       const binding = require(
-        `@parcel/watcher-${process.platform}-${process.arch}${process.platform === "linux" ? `-${OPENCODE_LIBC || "glibc"}` : ""}`,
+        `@parcel/watcher-${process.platform}-${process.arch}${process.platform === "linux" ? `-${OPENSURFER_LIBC || "glibc"}` : ""}`,
       )
       return createWrapper(binding) as typeof import("@parcel/watcher")
     } catch (error) {
@@ -65,7 +65,7 @@ export namespace FileWatcher {
     readonly init: () => Effect.Effect<void>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/FileWatcher") {}
+  export class Service extends ServiceMap.Service<Service, Interface>()("@opensurfer/FileWatcher") {}
 
   export const layer = Layer.effect(
     Service,
@@ -76,7 +76,7 @@ export namespace FileWatcher {
       const state = yield* InstanceState.make(
         Effect.fn("FileWatcher.state")(
           function* () {
-            if (yield* Flag.OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER) return
+            if (yield* Flag.OPENSURFER_EXPERIMENTAL_DISABLE_FILEWATCHER) return
 
             log.info("init", { directory: Instance.directory })
 
@@ -123,7 +123,7 @@ export namespace FileWatcher {
             const cfg = yield* config.get()
             const cfgIgnores = cfg.watcher?.ignore ?? []
 
-            if (yield* Flag.OPENCODE_EXPERIMENTAL_FILEWATCHER) {
+            if (yield* Flag.OPENSURFER_EXPERIMENTAL_FILEWATCHER) {
               yield* subscribe(Instance.directory, [
                 ...FileIgnore.PATTERNS,
                 ...cfgIgnores,

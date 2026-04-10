@@ -13,11 +13,11 @@ export namespace Observability {
         baseUrl: Flag.OTEL_EXPORTER_OTLP_ENDPOINT,
         loggerMergeWithExisting: false,
         resource: {
-          serviceName: "opencode",
+          serviceName: "opensurfer",
           serviceVersion: VERSION,
           attributes: {
             "deployment.environment.name": CHANNEL === "local" ? "local" : CHANNEL,
-            "opencode.client": Flag.OPENCODE_CLIENT,
+            "opencode.client": Flag.OPENSURFER_CLIENT,
           },
         },
         headers: Flag.OTEL_EXPORTER_OTLP_HEADERS

@@ -51,9 +51,9 @@ export namespace Server {
         // Allow CORS preflight requests to succeed without auth.
         // Browser clients sending Authorization headers will preflight with OPTIONS.
         if (c.req.method === "OPTIONS") return next()
-        const password = Flag.OPENCODE_SERVER_PASSWORD
+        const password = Flag.OPENSURFER_SERVER_PASSWORD
         if (!password) return next()
-        const username = Flag.OPENCODE_SERVER_USERNAME ?? "opencode"
+        const username = Flag.OPENSURFER_SERVER_USERNAME ?? "opensurfer"
 
         if (c.req.query("auth_token")) c.req.raw.headers.set("authorization", `Basic ${c.req.query("auth_token")}`)
 
@@ -168,7 +168,7 @@ export namespace Server {
             info: {
               title: "opencode",
               version: "0.0.3",
-              description: "opencode api",
+              description: "opensurfer api",
             },
             openapi: "3.1.1",
           },
@@ -263,7 +263,7 @@ export namespace Server {
         info: {
           title: "opencode",
           version: "1.0.0",
-          description: "opencode api",
+          description: "opensurfer api",
         },
         openapi: "3.1.1",
       },

@@ -1,13 +1,27 @@
-- Fetches content from a specified URL
-- Takes a URL and optional format as input
-- Fetches the URL content, converts to requested format (markdown by default)
-- Returns the content in the specified format
-- Use this tool when you need to retrieve and analyze web content
+- Fetches content from a specified URL and returns it as readable text
+- Use this tool to read web pages, articles, documentation, and any URL the user shares or mentions
+
+**Use webfetch DIRECTLY (no search needed) for these sites — they have native support:**
+- Twitter / X profiles and tweets: `https://x.com/{username}` or `https://x.com/{username}/status/{id}`
+- Reddit posts and subreddits: `https://reddit.com/r/{sub}/comments/...` or `https://reddit.com/r/{sub}`
+- Hacker News: `https://news.ycombinator.com/item?id={id}` or `https://news.ycombinator.com`
+- GitHub: repos, issues, PRs, files, user profiles (set GITHUB_TOKEN for higher rate limits)
+- HuggingFace: model cards, datasets, spaces, papers, user/org profiles (set HF_TOKEN for private repos)
+- Stack Overflow / Stack Exchange: any question URL
+- arXiv: `https://arxiv.org/abs/{id}`
+- Research papers: OpenReview (ICLR, NeurIPS), ACL Anthology (ACL/EMNLP/NAACL), CVF (CVPR/ECCV/ICCV), PMLR (ICML/AISTATS), IEEE Xplore, ACM DL — tries open-access versions first, Sci-Hub as last resort
+- Wikipedia: any article URL
+- YouTube: any video URL (extracts transcript)
+- Substack newsletters: `https://{pub}.substack.com` or individual post URLs
+- dev.to articles and profiles: `https://dev.to/{username}/{slug}` or `https://dev.to/{username}`
+- Lobste.rs stories: `https://lobste.rs/s/{id}` or `https://lobste.rs` for front page
+- Instagram public profiles/posts: `https://instagram.com/{username}` or post URLs
+- TikTok videos: `https://tiktok.com/@{user}/video/{id}`
+- Medium articles: fetched via paywall bypass automatically
+- NYT, Washington Post, Bloomberg, FT, WSJ: fetched via archive.ph automatically
 
 Usage notes:
-  - IMPORTANT: if another tool is present that offers better web fetching capabilities, is more targeted to the task, or has fewer restrictions, prefer using that tool instead of this one.
-  - The URL must be a fully-formed valid URL
-  - HTTP URLs will be automatically upgraded to HTTPS
+  - The URL must be a fully-formed valid URL starting with https://
   - Format options: "markdown" (default), "text", or "html"
+  - For long pages, results are paginated — use page=1, page=2, etc. for subsequent pages
   - This tool is read-only and does not modify any files
-  - Results may be summarized if the content is very large

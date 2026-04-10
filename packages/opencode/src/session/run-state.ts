@@ -23,7 +23,7 @@ export namespace SessionRunState {
     ) => Effect.Effect<MessageV2.WithParts>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/SessionRunState") {}
+  export class Service extends ServiceMap.Service<Service, Interface>()("@opensurfer/SessionRunState") {}
 
   export const layer = Layer.effect(
     Service,

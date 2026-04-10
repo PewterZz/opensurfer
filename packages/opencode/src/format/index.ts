@@ -31,7 +31,7 @@ export namespace Format {
     readonly file: (filepath: string) => Effect.Effect<void>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/Format") {}
+  export class Service extends ServiceMap.Service<Service, Interface>()("@opensurfer/Format") {}
 
   export const layer = Layer.effect(
     Service,

@@ -32,7 +32,7 @@ export namespace Todo {
     readonly get: (sessionID: SessionID) => Effect.Effect<Info[]>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/SessionTodo") {}
+  export class Service extends ServiceMap.Service<Service, Interface>()("@opensurfer/SessionTodo") {}
 
   export const layer = Layer.effect(
     Service,

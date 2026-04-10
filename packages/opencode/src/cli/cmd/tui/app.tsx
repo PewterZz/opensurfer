@@ -60,6 +60,8 @@ import { TuiConfigProvider, useTuiConfig } from "./context/tui-config"
 import { TuiConfig } from "@/config/tui"
 import { createTuiApi, TuiPluginRuntime, type RouteMap } from "./plugin"
 import { FormatError, FormatUnknownError } from "@/cli/error"
+import { AUTH_SITES, extractAndSaveCookies, openInSystemBrowser } from "@/util/browser-auth"
+import { DialogSelect } from "@tui/ui/dialog-select"
 
 async function getTerminalBackgroundColor(): Promise<"dark" | "light"> {
   // can't set raw mode if not a TTY
@@ -125,7 +127,7 @@ import type { EventSource } from "./context/sdk"
 import { DialogVariant } from "./component/dialog-variant"
 
 function rendererConfig(_config: TuiConfig.Info): CliRendererConfig {
-  const mouseEnabled = !Flag.OPENCODE_DISABLE_MOUSE && (_config.mouse ?? true)
+  const mouseEnabled = !Flag.OPENSURFER_DISABLE_MOUSE && (_config.mouse ?? true)
 
   return {
     externalOutputMode: "passthrough",
@@ -299,7 +301,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     })
 
   useKeyboard((evt) => {
-    if (!Flag.OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) return
+    if (!Flag.OPENSURFER_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) return
     const sel = renderer.getSelection()
     if (!sel) return
 
@@ -347,27 +349,27 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
 
   // Update terminal window title based on current route and session
   createEffect(() => {
-    if (!terminalTitleEnabled() || Flag.OPENCODE_DISABLE_TERMINAL_TITLE) return
+    if (!terminalTitleEnabled() || Flag.OPENSURFER_DISABLE_TERMINAL_TITLE) return
 
     if (route.data.type === "home") {
-      renderer.setTerminalTitle("OpenCode")
+      renderer.setTerminalTitle("OpenSurfer")
       return
     }
 
     if (route.data.type === "session") {
       const session = sync.session.get(route.data.sessionID)
       if (!session || SessionApi.isDefaultTitle(session.title)) {
-        renderer.setTerminalTitle("OpenCode")
+        renderer.setTerminalTitle("OpenSurfer")
         return
       }
 
       const title = session.title.length > 40 ? session.title.slice(0, 37) + "..." : session.title
-      renderer.setTerminalTitle(`OC | ${title}`)
+      renderer.setTerminalTitle(`OS | ${title}`)
       return
     }
 
     if (route.data.type === "plugin") {
-      renderer.setTerminalTitle(`OC | ${route.data.id}`)
+      renderer.setTerminalTitle(`OS | ${route.data.id}`)
     }
   })
 
@@ -461,7 +463,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
         dialog.replace(() => <DialogSessionList />)
       },
     },
-    ...(Flag.OPENCODE_EXPERIMENTAL_WORKSPACES
+    ...(Flag.OPENSURFER_EXPERIMENTAL_WORKSPACES
       ? [
           {
             title: "Manage workspaces",
@@ -651,7 +653,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     {
       title: "View status",
       keybind: "status_view",
-      value: "opencode.status",
+      value: "opensurfer.status",
       slash: {
         name: "status",
       },
@@ -706,7 +708,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
       title: "Open docs",
       value: "docs.open",
       onSelect: () => {
-        open("https://opencode.ai/docs").catch(() => {})
+        open("https://github.com/PewterZz/opensurfer").catch(() => {})
         dialog.clear()
       },
       category: "System",
@@ -804,6 +806,55 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
         dialog.clear()
       },
     },
+    {
+      title: "Log in to a website",
+      value: "auth.login",
+      category: "Auth",
+      slash: {
+        name: "auth",
+        aliases: ["login"],
+      },
+      onSelect: (dialog) => {
+        dialog.replace(() => (
+          <DialogSelect
+            title="Log in to a website"
+            placeholder="Search sites..."
+            flat
+            options={AUTH_SITES.map((site) => ({
+              title: site.label,
+              value: site.label,
+              description: site.hint,
+              onSelect: async (innerDialog) => {
+                openInSystemBrowser(site.loginUrl)
+                const confirmed = await DialogConfirm.show(
+                  innerDialog,
+                  `Log in to ${site.label}`,
+                  `Your browser has opened ${site.loginUrl}\n\nLog in, then come back here and press Enter to save your session cookies.`,
+                  "I'm logged in",
+                )
+                if (!confirmed) return
+                toast.show({ message: `Extracting cookies from your browser...`, variant: "info", duration: 5000 })
+                const result = await extractAndSaveCookies(site)
+                if (result.ok) {
+                  toast.show({
+                    message: `Saved ${result.cookieCount} cookies for ${site.label} (via ${result.method === "ytdlp" ? "yt-dlp" : "Firefox"})`,
+                    variant: "success",
+                    duration: 5000,
+                  })
+                } else {
+                  toast.show({
+                    message: result.error ?? `Failed to extract cookies for ${site.label}`,
+                    variant: "error",
+                    duration: 8000,
+                  })
+                }
+                innerDialog.clear()
+              },
+            }))}
+          />
+        ))
+      },
+    },
   ])
 
   sdk.event.on(TuiEvent.CommandExecute.type, (evt) => {
@@ -889,7 +940,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     await DialogAlert.show(
       dialog,
       "Update Complete",
-      `Successfully updated to OpenCode v${result.data.version}. Please restart the application.`,
+      `Successfully updated to OpenSurfer v${result.data.version}. Please restart the application.`,
     )
 
     exit()
@@ -909,16 +960,16 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
       height={dimensions().height}
       backgroundColor={theme.background}
       onMouseDown={(evt) => {
-        if (!Flag.OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) return
+        if (!Flag.OPENSURFER_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) return
         if (evt.button !== MouseButton.RIGHT) return
 
         if (!Selection.copy(renderer, toast)) return
         evt.preventDefault()
         evt.stopPropagation()
       }}
-      onMouseUp={Flag.OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT ? undefined : () => Selection.copy(renderer, toast)}
+      onMouseUp={Flag.OPENSURFER_EXPERIMENTAL_DISABLE_COPY_ON_SELECT ? undefined : () => Selection.copy(renderer, toast)}
     >
-      <Show when={Flag.OPENCODE_SHOW_TTFD}>
+      <Show when={Flag.OPENSURFER_SHOW_TTFD}>
         <TimeToFirstDraw />
       </Show>
       <Show when={ready()}>

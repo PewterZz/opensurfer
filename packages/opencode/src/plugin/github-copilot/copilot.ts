@@ -51,7 +51,7 @@ export async function CopilotAuthPlugin(input: PluginInput): Promise<Hooks> {
           base(ctx.auth.enterpriseUrl),
           {
             Authorization: `Bearer ${ctx.auth.refresh}`,
-            "User-Agent": `opencode/${Installation.VERSION}`,
+            "User-Agent": `opensurfer/${Installation.VERSION}`,
           },
           provider.models,
         ).catch((error) => {
@@ -132,7 +132,7 @@ export async function CopilotAuthPlugin(input: PluginInput): Promise<Hooks> {
             const headers: Record<string, string> = {
               "x-initiator": isAgent ? "agent" : "user",
               ...(init?.headers as Record<string, string>),
-              "User-Agent": `opencode/${Installation.VERSION}`,
+              "User-Agent": `opensurfer/${Installation.VERSION}`,
               Authorization: `Bearer ${info.refresh}`,
               "Openai-Intent": "conversation-edits",
             }
@@ -208,7 +208,7 @@ export async function CopilotAuthPlugin(input: PluginInput): Promise<Hooks> {
               headers: {
                 Accept: "application/json",
                 "Content-Type": "application/json",
-                "User-Agent": `opencode/${Installation.VERSION}`,
+                "User-Agent": `opensurfer/${Installation.VERSION}`,
               },
               body: JSON.stringify({
                 client_id: CLIENT_ID,
@@ -238,7 +238,7 @@ export async function CopilotAuthPlugin(input: PluginInput): Promise<Hooks> {
                     headers: {
                       Accept: "application/json",
                       "Content-Type": "application/json",
-                      "User-Agent": `opencode/${Installation.VERSION}`,
+                      "User-Agent": `opensurfer/${Installation.VERSION}`,
                     },
                     body: JSON.stringify({
                       client_id: CLIENT_ID,

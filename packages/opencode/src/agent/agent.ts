@@ -10,6 +10,7 @@ import { ProviderTransform } from "../provider/transform"
 
 import PROMPT_GENERATE from "./generate.txt"
 import PROMPT_COMPACTION from "./prompt/compaction.txt"
+import PROMPT_DEEP_RESEARCH from "./prompt/deep-research.txt"
 import PROMPT_EXPLORE from "./prompt/explore.txt"
 import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
@@ -67,7 +68,7 @@ export namespace Agent {
 
   type State = Omit<Interface, "generate">
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/Agent") {}
+  export class Service extends ServiceMap.Service<Service, Interface>()("@opensurfer/Agent") {}
 
   export const layer = Layer.effect(
     Service,
@@ -105,15 +106,49 @@ export namespace Agent {
           const user = Permission.fromConfig(cfg.permission ?? {})
 
           const agents: Record<string, Info> = {
-            build: {
-              name: "build",
-              description: "The default agent. Executes tools based on configured permissions.",
+            search: {
+              name: "search",
+              description: "Default search mode. Searches the web for every query and returns sourced answers.",
               options: {},
               permission: Permission.merge(
                 defaults,
                 Permission.fromConfig({
                   question: "allow",
                   plan_enter: "allow",
+                  websearch: "allow",
+                  webfetch: "allow",
+                  codesearch: "deny",
+                }),
+                user,
+              ),
+              mode: "primary",
+              native: true,
+            },
+            deep_research: {
+              name: "deep_research",
+              description: "Deep research mode. Runs many searches, writes findings to .opensurfer/research/, and synthesizes a thorough sourced answer.",
+              prompt: PROMPT_DEEP_RESEARCH,
+              options: {},
+              permission: Permission.merge(
+                defaults,
+                Permission.fromConfig({
+                  question: "allow",
+                  plan_enter: "allow",
+                  websearch: "allow",
+                  webfetch: "allow",
+                  read: "allow",
+                  glob: "allow",
+                  grep: "allow",
+                  list: "allow",
+                  codesearch: "deny",
+                  edit: {
+                    "*": "deny",
+                    [path.join(".opensurfer", "research", "*.md")]: "allow",
+                  },
+                  write: {
+                    "*": "deny",
+                    [path.join(".opensurfer", "research", "*.md")]: "allow",
+                  },
                 }),
                 user,
               ),
@@ -122,7 +157,7 @@ export namespace Agent {
             },
             plan: {
               name: "plan",
-              description: "Plan mode. Disallows all edit tools.",
+              description: "Research planning mode. Outlines research strategy without executing searches.",
               options: {},
               permission: Permission.merge(
                 defaults,
@@ -134,7 +169,8 @@ export namespace Agent {
                   },
                   edit: {
                     "*": "deny",
-                    [path.join(".opencode", "plans", "*.md")]: "allow",
+                    [path.join(".opensurfer", "plans", "*.md")]: "allow",
+                    [path.join(".opensurfer", "plans", "*.md")]: "allow",
                     [path.relative(Instance.worktree, path.join(Global.Path.data, path.join("plans", "*.md")))]:
                       "allow",
                   },
@@ -146,7 +182,7 @@ export namespace Agent {
             },
             general: {
               name: "general",
-              description: `General-purpose agent for researching complex questions and executing multi-step tasks. Use this agent to execute multiple units of work in parallel.`,
+              description: `General-purpose agent for complex research requiring multiple parallel searches and multi-step synthesis. Use this agent when you need to gather information from multiple sources simultaneously.`,
               permission: Permission.merge(
                 defaults,
                 Permission.fromConfig({
@@ -179,7 +215,7 @@ export namespace Agent {
                 }),
                 user,
               ),
-              description: `Fast agent specialized for exploring codebases. Use this when you need to quickly find files by patterns (eg. "src/components/**/*.tsx"), search code for keywords (eg. "API endpoints"), or answer questions about the codebase (eg. "how do API endpoints work?"). When calling this agent, specify the desired thoroughness level: "quick" for basic searches, "medium" for moderate exploration, or "very thorough" for comprehensive analysis across multiple locations and naming conventions.`,
+              description: `Fast agent specialized for web research and information gathering. Use this when you need to quickly search the web, fetch pages, find documentation, or answer questions requiring current information. When calling this agent, specify the desired thoroughness level: "quick" for a fast search, "medium" for moderate exploration, or "very thorough" for comprehensive multi-source analysis.`,
               prompt: PROMPT_EXPLORE,
               options: {},
               mode: "subagent",
@@ -288,7 +324,7 @@ export namespace Agent {
               agents,
               values(),
               sortBy(
-                [(x) => (cfg.default_agent ? x.name === cfg.default_agent : x.name === "build"), "desc"],
+                [(x) => (cfg.default_agent ? x.name === cfg.default_agent : x.name === "search"), "desc"],
                 [(x) => x.name, "asc"],
               ),
             )
@@ -303,7 +339,9 @@ export namespace Agent {
               if (agent.hidden === true) throw new Error(`default agent "${c.default_agent}" is hidden`)
               return agent.name
             }
-            const visible = Object.values(agents).find((a) => a.mode !== "subagent" && a.hidden !== true)
+            const visible =
+              agents["search"] ??
+              Object.values(agents).find((a) => a.mode !== "subagent" && a.hidden !== true)
             if (!visible) throw new Error("no primary visible agent found")
             return visible.name
           })

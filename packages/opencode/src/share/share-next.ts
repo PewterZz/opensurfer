@@ -17,7 +17,7 @@ import { SessionShareTable } from "./share.sql"
 
 export namespace ShareNext {
   const log = Log.create({ service: "share-next" })
-  const disabled = process.env["OPENCODE_DISABLE_SHARE"] === "true" || process.env["OPENCODE_DISABLE_SHARE"] === "1"
+  const disabled = process.env["OPENSURFER_DISABLE_SHARE"] === "true" || process.env["OPENSURFER_DISABLE_SHARE"] === "1"
 
   export type Api = {
     create: string
@@ -74,7 +74,7 @@ export namespace ShareNext {
     readonly remove: (sessionID: SessionID) => Effect.Effect<void, unknown>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/ShareNext") {}
+  export class Service extends ServiceMap.Service<Service, Interface>()("@opensurfer/ShareNext") {}
 
   const db = <T>(fn: (d: Parameters<typeof Database.use>[0] extends (trx: infer D) => any ? D : never) => T) =>
     Effect.sync(() => Database.use(fn))

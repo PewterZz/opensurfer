@@ -109,7 +109,7 @@ export namespace ProviderAuth {
     pending: Map<ProviderID, AuthOAuthResult>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/ProviderAuth") {}
+  export class Service extends ServiceMap.Service<Service, Interface>()("@opensurfer/ProviderAuth") {}
 
   export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service> = Layer.effect(
     Service,

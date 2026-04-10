@@ -1,8 +1,22 @@
-- To regenerate the JavaScript SDK, run `./packages/sdk/js/script/build.ts`.
+## Project context
+
+This is **OpenSurfer** — a fork of [OpenCode](https://github.com/sst/opencode) repurposed as a terminal-based AI research and web browsing agent. It is NOT a coding assistant. The architecture (tool system, agent framework, session management, plugin system) is inherited from OpenCode unchanged. What differs:
+
+- **Identity:** research agent, not coding agent
+- **Primary tools:** `webfetch` (25+ native site handlers) and `websearch`
+- **System prompts:** completely rewritten for research workflows (`src/session/prompt/*.txt`)
+- **Branding:** OpenSurfer, config at `~/.config/opensurfer/`, env vars `OPENSURFER_*`
+- **New feature:** `/auth` command for browser cookie extraction (`src/util/browser-auth.ts`)
+
+Before modifying files, read **`MERGE_UPSTREAM.md`** — it lists which files must be preserved from our fork vs which are safe to take from upstream OpenCode.
+
+## General
+
 - ALWAYS USE PARALLEL TOOLS WHEN APPLICABLE.
 - The default branch in this repo is `dev`.
 - Local `main` ref may not exist; use `dev` or `origin/dev` for diffs.
 - Prefer automation: execute requested actions without confirmation unless blocked by missing info or safety/irreversibility.
+- The main package is at `packages/opencode/` (directory name unchanged from upstream for tooling compatibility).
 
 ## Style Guide
 
@@ -126,3 +140,28 @@ const table = sqliteTable("session", {
 ## Type Checking
 
 - Always run `bun typecheck` from package directories (e.g., `packages/opencode`), never `tsc` directly.
+
+## Build verification
+
+After any change to source files, verify the build compiles:
+
+```bash
+cd packages/opencode
+bun run --conditions=browser src/index.ts --version
+# Should print a version string without errors
+```
+
+## Key files for research agent features
+
+When working on OpenSurfer-specific functionality, these are the files most likely to need changes:
+
+| What you're changing | File |
+|---|---|
+| How sites are fetched (new site handler) | `src/tool/webfetch.ts` |
+| Agent behavior / search strategy | `src/session/prompt/default.txt`, `src/session/prompt/anthropic.txt` |
+| Tool descriptions shown to the model | `src/tool/webfetch.txt`, `src/tool/websearch.txt` |
+| `/auth` browser cookie command | `src/util/browser-auth.ts`, `src/cli/cmd/tui/app.tsx` |
+| Home screen placeholders | `src/cli/cmd/tui/routes/home.tsx` |
+| Session history sidebar | `src/cli/cmd/tui/feature-plugins/sidebar/lsp.tsx` |
+| Which tools are available per provider | `src/tool/registry.ts` |
+| Agent names and descriptions | `src/agent/agent.ts` |

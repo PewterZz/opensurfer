@@ -65,7 +65,7 @@ export namespace ToolRegistry {
     }) => Effect.Effect<Tool.Def[]>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/ToolRegistry") {}
+  export class Service extends ServiceMap.Service<Service, Interface>()("@opensurfer/ToolRegistry") {}
 
   export const layer: Layer.Layer<
     Service,
@@ -146,7 +146,7 @@ export namespace ToolRegistry {
 
           const cfg = yield* config.get()
           const questionEnabled =
-            ["app", "cli", "desktop"].includes(Flag.OPENCODE_CLIENT) || Flag.OPENCODE_ENABLE_QUESTION_TOOL
+            ["app", "cli", "desktop"].includes(Flag.OPENSURFER_CLIENT) || Flag.OPENSURFER_ENABLE_QUESTION_TOOL
 
           const tool = yield* Effect.all({
             invalid: Tool.init(InvalidTool),
@@ -186,8 +186,8 @@ export namespace ToolRegistry {
               tool.code,
               tool.skill,
               tool.patch,
-              ...(Flag.OPENCODE_EXPERIMENTAL_LSP_TOOL ? [tool.lsp] : []),
-              ...(Flag.OPENCODE_EXPERIMENTAL_PLAN_MODE && Flag.OPENCODE_CLIENT === "cli" ? [tool.plan] : []),
+              ...(Flag.OPENSURFER_EXPERIMENTAL_LSP_TOOL ? [tool.lsp] : []),
+              ...(Flag.OPENSURFER_EXPERIMENTAL_PLAN_MODE && Flag.OPENSURFER_CLIENT === "cli" ? [tool.plan] : []),
             ],
             task: tool.task,
             read: tool.read,
@@ -240,12 +240,8 @@ export namespace ToolRegistry {
 
       const tools: Interface["tools"] = Effect.fn("ToolRegistry.tools")(function* (input) {
         const filtered = (yield* all()).filter((tool) => {
-          if (tool.id === CodeSearchTool.id || tool.id === WebSearchTool.id) {
-            return input.providerID === ProviderID.opencode || Flag.OPENCODE_ENABLE_EXA
-          }
-
           const usePatch =
-            !!Env.get("OPENCODE_E2E_LLM_URL") ||
+            !!Env.get("OPENSURFER_E2E_LLM_URL") ||
             (input.modelID.includes("gpt-") && !input.modelID.includes("oss") && !input.modelID.includes("gpt-4"))
           if (tool.id === ApplyPatchTool.id) return usePatch
           if (tool.id === EditTool.id || tool.id === WriteTool.id) return !usePatch

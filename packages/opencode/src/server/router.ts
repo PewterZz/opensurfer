@@ -30,7 +30,7 @@ export function WorkspaceRouterMiddleware(upgrade: UpgradeWebSocket): Middleware
   const routes = lazy(() => InstanceRoutes(upgrade))
 
   return async (c) => {
-    const raw = c.req.query("directory") || c.req.header("x-opencode-directory") || process.cwd()
+    const raw = c.req.query("directory") || c.req.header("x-opensurfer-directory") || process.cwd()
     const directory = Filesystem.resolve(
       (() => {
         try {
@@ -42,7 +42,7 @@ export function WorkspaceRouterMiddleware(upgrade: UpgradeWebSocket): Middleware
     )
 
     const url = new URL(c.req.url)
-    const workspaceParam = url.searchParams.get("workspace") || c.req.header("x-opencode-workspace")
+    const workspaceParam = url.searchParams.get("workspace") || c.req.header("x-opensurfer-workspace")
 
     // TODO: If session is being routed, force it to lookup the
     // project/workspace
@@ -93,7 +93,7 @@ export function WorkspaceRouterMiddleware(upgrade: UpgradeWebSocket): Middleware
     }
 
     const headers = new Headers(c.req.raw.headers)
-    headers.delete("x-opencode-workspace")
+    headers.delete("x-opensurfer-workspace")
 
     return ServerProxy.http(
       target,

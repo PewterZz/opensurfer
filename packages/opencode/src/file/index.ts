@@ -337,7 +337,7 @@ export namespace File {
     }) => Effect.Effect<string[]>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/File") {}
+  export class Service extends ServiceMap.Service<Service, Interface>()("@opensurfer/File") {}
 
   export const layer = Layer.effect(
     Service,

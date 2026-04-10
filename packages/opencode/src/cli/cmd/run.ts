@@ -283,7 +283,7 @@ export const RunCommand = cmd({
       .option("password", {
         alias: ["p"],
         type: "string",
-        describe: "basic auth password (defaults to OPENCODE_SERVER_PASSWORD)",
+        describe: "basic auth password (defaults to OPENSURFER_SERVER_PASSWORD)",
       })
       .option("dir", {
         type: "string",
@@ -401,7 +401,7 @@ export const RunCommand = cmd({
     async function share(sdk: OpencodeClient, sessionID: string) {
       const cfg = await sdk.config.get()
       if (!cfg.data) return
-      if (cfg.data.share !== "auto" && !Flag.OPENCODE_AUTO_SHARE && !args.share) return
+      if (cfg.data.share !== "auto" && !Flag.OPENSURFER_AUTO_SHARE && !args.share) return
       const res = await sdk.session.share({ sessionID }).catch((error) => {
         if (error instanceof Error && error.message.includes("disabled")) {
           UI.println(UI.Style.TEXT_DANGER_BOLD + "!  " + error.message)
@@ -667,9 +667,9 @@ export const RunCommand = cmd({
 
     if (args.attach) {
       const headers = (() => {
-        const password = args.password ?? process.env.OPENCODE_SERVER_PASSWORD
+        const password = args.password ?? process.env.OPENSURFER_SERVER_PASSWORD
         if (!password) return undefined
-        const username = process.env.OPENCODE_SERVER_USERNAME ?? "opencode"
+        const username = process.env.OPENSURFER_SERVER_USERNAME ?? "opensurfer"
         const auth = `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`
         return { Authorization: auth }
       })()

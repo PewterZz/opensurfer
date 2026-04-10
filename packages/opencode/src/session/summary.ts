@@ -71,7 +71,7 @@ export namespace SessionSummary {
     readonly computeDiff: (input: { messages: MessageV2.WithParts[] }) => Effect.Effect<Snapshot.FileDiff[]>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/SessionSummary") {}
+  export class Service extends ServiceMap.Service<Service, Interface>()("@opensurfer/SessionSummary") {}
 
   export const layer = Layer.effect(
     Service,

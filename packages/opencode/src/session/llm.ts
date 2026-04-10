@@ -51,7 +51,7 @@ export namespace LLM {
     readonly stream: (input: StreamInput) => Stream.Stream<Event, unknown>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/LLM") {}
+  export class Service extends ServiceMap.Service<Service, Interface>()("@opensurfer/LLM") {}
 
   export const layer = Layer.effect(
     Service,
@@ -354,15 +354,15 @@ export namespace LLM {
       headers: {
         ...(input.model.providerID.startsWith("opencode")
           ? {
-              "x-opencode-project": Instance.project.id,
-              "x-opencode-session": input.sessionID,
-              "x-opencode-request": input.user.id,
-              "x-opencode-client": Flag.OPENCODE_CLIENT,
+              "x-opensurfer-project": Instance.project.id,
+              "x-opensurfer-session": input.sessionID,
+              "x-opensurfer-request": input.user.id,
+              "x-opensurfer-client": Flag.OPENSURFER_CLIENT,
             }
           : {
               "x-session-affinity": input.sessionID,
               ...(input.parentSessionID ? { "x-parent-session-id": input.parentSessionID } : {}),
-              "User-Agent": `opencode/${Installation.VERSION}`,
+              "User-Agent": `opensurfer/${Installation.VERSION}`,
             }),
         ...input.model.headers,
         ...headers,

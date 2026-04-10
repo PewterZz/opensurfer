@@ -70,7 +70,7 @@ export namespace Command {
     readonly list: () => Effect.Effect<Info[]>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/Command") {}
+  export class Service extends ServiceMap.Service<Service, Interface>()("@opensurfer/Command") {}
 
   export const layer = Layer.effect(
     Service,

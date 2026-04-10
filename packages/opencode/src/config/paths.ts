@@ -15,10 +15,10 @@ export namespace ConfigPaths {
   export async function directories(directory: string, worktree: string) {
     return [
       Global.Path.config,
-      ...(!Flag.OPENCODE_DISABLE_PROJECT_CONFIG
+      ...(!Flag.OPENSURFER_DISABLE_PROJECT_CONFIG
         ? await Array.fromAsync(
             Filesystem.up({
-              targets: [".opencode"],
+              targets: [".opensurfer"],
               start: directory,
               stop: worktree,
             }),
@@ -26,12 +26,12 @@ export namespace ConfigPaths {
         : []),
       ...(await Array.fromAsync(
         Filesystem.up({
-          targets: [".opencode"],
+          targets: [".opensurfer"],
           start: Global.Path.home,
           stop: Global.Path.home,
         }),
       )),
-      ...(Flag.OPENCODE_CONFIG_DIR ? [Flag.OPENCODE_CONFIG_DIR] : []),
+      ...(Flag.OPENSURFER_CONFIG_DIR ? [Flag.OPENSURFER_CONFIG_DIR] : []),
     ]
   }
 

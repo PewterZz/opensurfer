@@ -37,13 +37,13 @@ export namespace FileTime {
     readonly withLock: <T>(filepath: string, fn: () => Promise<T>) => Effect.Effect<T>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/FileTime") {}
+  export class Service extends ServiceMap.Service<Service, Interface>()("@opensurfer/FileTime") {}
 
   export const layer = Layer.effect(
     Service,
     Effect.gen(function* () {
       const fsys = yield* AppFileSystem.Service
-      const disableCheck = yield* Flag.OPENCODE_DISABLE_FILETIME_CHECK
+      const disableCheck = yield* Flag.OPENSURFER_DISABLE_FILETIME_CHECK
 
       const stamp = Effect.fnUntraced(function* (file: string) {
         const info = yield* fsys.stat(file).pipe(Effect.catch(() => Effect.void))

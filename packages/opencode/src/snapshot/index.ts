@@ -57,7 +57,7 @@ export namespace Snapshot {
     readonly diffFull: (from: string, to: string) => Effect.Effect<Snapshot.FileDiff[]>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/Snapshot") {}
+  export class Service extends ServiceMap.Service<Service, Interface>()("@opensurfer/Snapshot") {}
 
   export const layer: Layer.Layer<
     Service,

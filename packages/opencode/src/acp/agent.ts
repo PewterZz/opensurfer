@@ -550,7 +550,7 @@ export namespace ACP {
           "terminal-auth": {
             command: "opencode",
             args: ["auth", "login"],
-            label: "OpenCode Login",
+            label: "OpenSurfer Login",
           },
         }
       }
@@ -575,7 +575,7 @@ export namespace ACP {
         },
         authMethods: [authMethod],
         agentInfo: {
-          name: "OpenCode",
+          name: "OpenSurfer",
           version: Installation.VERSION,
         },
       }
@@ -1008,7 +1008,7 @@ export namespace ACP {
           }
         } else if (part.type === "file") {
           // Replay file attachments as appropriate ACP content blocks.
-          // OpenCode stores files internally as { type: "file", url, filename, mime }.
+          // OpenSurfer stores files internally as { type: "file", url, filename, mime }.
           // We convert these back to ACP blocks based on the URL scheme and MIME type:
           // - file:// URLs → resource_link
           // - data: URLs with image/* → image block
@@ -1636,7 +1636,7 @@ export namespace ACP {
     const opencodeProvider = providers.find((p) => p.id === "opencode")
     if (opencodeProvider) {
       if (opencodeProvider.models["big-pickle"]) {
-        return { providerID: ProviderID.opencode, modelID: ModelID.make("big-pickle") }
+        return { providerID: ProviderID.opensurfer, modelID: ModelID.make("big-pickle") }
       }
       const [best] = Provider.sort(Object.values(opencodeProvider.models))
       if (best) {
@@ -1658,7 +1658,7 @@ export namespace ACP {
 
     if (specified) return specified
 
-    return { providerID: ProviderID.opencode, modelID: ModelID.make("big-pickle") }
+    return { providerID: ProviderID.opensurfer, modelID: ModelID.make("big-pickle") }
   }
 
   function parseUri(

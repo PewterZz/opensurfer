@@ -80,7 +80,7 @@ export namespace Git {
     return "modified"
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/Git") {}
+  export class Service extends ServiceMap.Service<Service, Interface>()("@opensurfer/Git") {}
 
   export const layer = Layer.effect(
     Service,

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-APP=opencode
+APP=opensurfer
 
 MUTED='\033[0;2m'
 RED='\033[0;31m'
@@ -9,7 +9,7 @@ NC='\033[0m' # No Color
 
 usage() {
     cat <<EOF
-OpenCode Installer
+OpenSurfer Installer
 
 Usage: install.sh [options]
 
@@ -18,16 +18,18 @@ Options:
     -v, --version <version> Install a specific version (e.g., 1.0.180)
     -b, --binary <path>     Install from a local binary instead of downloading
         --no-modify-path    Don't modify shell config files (.zshrc, .bashrc, etc.)
+        --no-optional       Skip installing optional dependencies (curl-impersonate, chafa, streamlink, carbonyl)
 
 Examples:
-    curl -fsSL https://opencode.ai/install | bash
-    curl -fsSL https://opencode.ai/install | bash -s -- --version 1.0.180
-    ./install --binary /path/to/opencode
+    curl -fsSL https://raw.githubusercontent.com/PewterZz/opensurfer/dev/install | bash
+    curl -fsSL https://raw.githubusercontent.com/PewterZz/opensurfer/dev/install | bash -s -- --version 1.0.180
+    ./install --binary /path/to/opensurfer
 EOF
 }
 
 requested_version=${VERSION:-}
 no_modify_path=false
+no_optional=false
 binary_path=""
 
 while [[ $# -gt 0 ]]; do
@@ -54,6 +56,10 @@ while [[ $# -gt 0 ]]; do
                 exit 1
             fi
             ;;
+        --no-optional)
+            no_optional=true
+            shift
+            ;;
         --no-modify-path)
             no_modify_path=true
             shift
@@ -65,7 +71,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-INSTALL_DIR=$HOME/.opencode/bin
+INSTALL_DIR=$HOME/.opensurfer/bin
 mkdir -p "$INSTALL_DIR"
 
 # If --binary is provided, skip all download/detection logic
@@ -181,8 +187,8 @@ else
     fi
 
     if [ -z "$requested_version" ]; then
-        url="https://github.com/anomalyco/opencode/releases/latest/download/$filename"
-        specific_version=$(curl -s https://api.github.com/repos/anomalyco/opencode/releases/latest | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')
+        url="https://github.com/PewterZz/opensurfer/releases/latest/download/$filename"
+        specific_version=$(curl -s https://api.github.com/repos/PewterZz/opensurfer/releases/latest | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')
 
         if [[ $? -ne 0 || -z "$specific_version" ]]; then
             echo -e "${RED}Failed to fetch version information${NC}"
@@ -191,14 +197,14 @@ else
     else
         # Strip leading 'v' if present
         requested_version="${requested_version#v}"
-        url="https://github.com/anomalyco/opencode/releases/download/v${requested_version}/$filename"
+        url="https://github.com/PewterZz/opensurfer/releases/download/v${requested_version}/$filename"
         specific_version=$requested_version
 
         # Verify the release exists before downloading
-        http_status=$(curl -sI -o /dev/null -w "%{http_code}" "https://github.com/anomalyco/opencode/releases/tag/v${requested_version}")
+        http_status=$(curl -sI -o /dev/null -w "%{http_code}" "https://github.com/PewterZz/opensurfer/releases/tag/v${requested_version}")
         if [ "$http_status" = "404" ]; then
             echo -e "${RED}Error: Release v${requested_version} not found${NC}"
-            echo -e "${MUTED}Available releases: https://github.com/anomalyco/opencode/releases${NC}"
+            echo -e "${MUTED}Available releases: https://github.com/PewterZz/opensurfer/releases${NC}"
             exit 1
         fi
     fi
@@ -219,11 +225,11 @@ print_message() {
 }
 
 check_version() {
-    if command -v opencode >/dev/null 2>&1; then
-        opencode_path=$(which opencode)
+    if command -v opensurfer >/dev/null 2>&1; then
+        opensurfer_path=$(which opensurfer)
 
         ## Check the installed version
-        installed_version=$(opencode --version 2>/dev/null || echo "")
+        installed_version=$(opensurfer --version 2>/dev/null || echo "")
 
         if [[ "$installed_version" != "$specific_version" ]]; then
             print_message info "${MUTED}Installed version: ${NC}$installed_version."
@@ -275,7 +281,7 @@ download_with_progress() {
     fi
 
     local tmp_dir=${TMPDIR:-/tmp}
-    local basename="${tmp_dir}/opencode_install_$$"
+    local basename="${tmp_dir}/opensurfer_install_$$"
     local tracefile="${basename}.trace"
 
     rm -f "$tracefile"
@@ -325,8 +331,8 @@ download_with_progress() {
 }
 
 download_and_install() {
-    print_message info "\n${MUTED}Installing ${NC}opencode ${MUTED}version: ${NC}$specific_version"
-    local tmp_dir="${TMPDIR:-/tmp}/opencode_install_$$"
+    print_message info "\n${MUTED}Installing ${NC}opensurfer ${MUTED}version: ${NC}$specific_version"
+    local tmp_dir="${TMPDIR:-/tmp}/opensurfer_install_$$"
     mkdir -p "$tmp_dir"
 
     if [[ "$os" == "windows" ]] || ! [ -t 2 ] || ! download_with_progress "$url" "$tmp_dir/$filename"; then
@@ -340,15 +346,15 @@ download_and_install() {
         unzip -q "$tmp_dir/$filename" -d "$tmp_dir"
     fi
 
-    mv "$tmp_dir/opencode" "$INSTALL_DIR"
-    chmod 755 "${INSTALL_DIR}/opencode"
+    mv "$tmp_dir/opensurfer" "$INSTALL_DIR"
+    chmod 755 "${INSTALL_DIR}/opensurfer"
     rm -rf "$tmp_dir"
 }
 
 install_from_binary() {
-    print_message info "\n${MUTED}Installing ${NC}opencode ${MUTED}from: ${NC}$binary_path"
-    cp "$binary_path" "${INSTALL_DIR}/opencode"
-    chmod 755 "${INSTALL_DIR}/opencode"
+    print_message info "\n${MUTED}Installing ${NC}opensurfer ${MUTED}from: ${NC}$binary_path"
+    cp "$binary_path" "${INSTALL_DIR}/opensurfer"
+    chmod 755 "${INSTALL_DIR}/opensurfer"
 }
 
 if [ -n "$binary_path" ]; then
@@ -358,6 +364,182 @@ else
     download_and_install
 fi
 
+# ── Optional feature dependencies ─────────────────────────────────────────────
+# curl-impersonate → exact Firefox TLS fingerprint for search scraping (highest priority)
+# chafa             → image rendering in the Links tab
+# streamlink        → video stream playback via mpv (Twitch, YouTube, etc.)
+# yt-dlp            → YouTube/video transcript extraction for research
+# carbonyl          → full terminal web browser (renders pages like a real browser)
+# All are optional and degrade gracefully if absent. Skip with --no-optional.
+
+install_optional_deps() {
+    echo -e "\n${MUTED}Checking optional feature dependencies...${NC}"
+    echo -e "${MUTED}(Skip anytime with --no-optional)${NC}\n"
+
+    # ── streamlink ────────────────────────────────────────────────────────────
+    # Installs via pip3/pipx — no sudo needed, works on Linux + macOS
+    if command -v streamlink >/dev/null 2>&1; then
+        echo -e "${MUTED}  ✓ streamlink already installed${NC}"
+    else
+        echo -e "${MUTED}  Installing streamlink (video streaming → mpv)...${NC}"
+        installed_sl=false
+        if command -v pipx >/dev/null 2>&1; then
+            pipx install streamlink --quiet 2>/dev/null && installed_sl=true || true
+        fi
+        if [ "$installed_sl" = "false" ] && command -v pip3 >/dev/null 2>&1; then
+            pip3 install --user --quiet streamlink 2>/dev/null && installed_sl=true || true
+        fi
+        if [ "$installed_sl" = "true" ]; then
+            echo -e "  ${NC}streamlink installed"
+        else
+            echo -e "  ${ORANGE}streamlink: install manually:  pip3 install streamlink${NC}"
+        fi
+    fi
+
+    # ── yt-dlp ────────────────────────────────────────────────────────────────
+    # Used to extract transcripts/captions from YouTube and other video sites
+    if command -v yt-dlp >/dev/null 2>&1; then
+        echo -e "${MUTED}  ✓ yt-dlp already installed${NC}"
+    else
+        echo -e "${MUTED}  Installing yt-dlp (video transcript extraction)...${NC}"
+        installed_ytdlp=false
+        if command -v pipx >/dev/null 2>&1; then
+            pipx install yt-dlp --quiet 2>/dev/null && installed_ytdlp=true || true
+        fi
+        if [ "$installed_ytdlp" = "false" ] && command -v pip3 >/dev/null 2>&1; then
+            pip3 install --user --quiet yt-dlp 2>/dev/null && installed_ytdlp=true || true
+        fi
+        if [ "$installed_ytdlp" = "true" ]; then
+            echo -e "  ${NC}yt-dlp installed"
+        else
+            echo -e "  ${ORANGE}yt-dlp: install manually:  pip3 install yt-dlp${NC}"
+        fi
+    fi
+
+    # ── chafa ─────────────────────────────────────────────────────────────────
+    # Small package, available everywhere. Tries brew/apt/dnf/pacman/zypper.
+    if command -v chafa >/dev/null 2>&1; then
+        echo -e "${MUTED}  ✓ chafa already installed${NC}"
+    else
+        echo -e "${MUTED}  Installing chafa (image rendering in terminal)...${NC}"
+        installed_ch=false
+        if [ "$os" = "darwin" ] && command -v brew >/dev/null 2>&1; then
+            brew install --quiet chafa 2>/dev/null && installed_ch=true || true
+        elif [ "$os" = "linux" ]; then
+            if command -v apt-get >/dev/null 2>&1; then
+                sudo apt-get install -y -qq chafa 2>/dev/null && installed_ch=true || true
+            elif command -v dnf >/dev/null 2>&1; then
+                sudo dnf install -y -q chafa 2>/dev/null && installed_ch=true || true
+            elif command -v pacman >/dev/null 2>&1; then
+                sudo pacman -S --noconfirm --quiet chafa 2>/dev/null && installed_ch=true || true
+            elif command -v zypper >/dev/null 2>&1; then
+                sudo zypper install -y -q chafa 2>/dev/null && installed_ch=true || true
+            fi
+        fi
+        if [ "$installed_ch" = "true" ]; then
+            echo -e "  ${NC}chafa installed"
+        else
+            echo -e "  ${ORANGE}chafa: install manually from https://hpjansson.org/chafa/${NC}"
+        fi
+    fi
+
+    # ── curl-impersonate ──────────────────────────────────────────────────────
+    # Produces an exact Firefox TLS fingerprint, bypassing bot detection on
+    # Bing, Google, and other sites that block Bun/Node's default BoringSSL JA3.
+    # Falls back to standard curl (still better than Bun) if unavailable.
+    if command -v curl-impersonate-ff >/dev/null 2>&1 || command -v curl-impersonate >/dev/null 2>&1; then
+        echo -e "${MUTED}  ✓ curl-impersonate already installed${NC}"
+    elif [ "$os" = "linux" ]; then
+        echo -e "${MUTED}  Installing curl-impersonate (TLS fingerprint bypass for search)...${NC}"
+        installed_ci=false
+        ci_url=""
+        case "${combo:-}" in
+            linux-x64)   ci_url="https://github.com/lwthiker/curl-impersonate/releases/latest/download/curl-impersonate-ff.x86_64-linux-gnu.tar.gz" ;;
+            linux-arm64) ci_url="https://github.com/lwthiker/curl-impersonate/releases/latest/download/curl-impersonate-ff.aarch64-linux-gnu.tar.gz" ;;
+        esac
+
+        if [ -z "$ci_url" ]; then
+            echo -e "${MUTED}  curl-impersonate: unsupported platform, skipping${NC}"
+        else
+            ci_tmp="${TMPDIR:-/tmp}/curl_impersonate_$$"
+            mkdir -p "$ci_tmp"
+            if curl -fsSL -o "$ci_tmp/curl-impersonate.tar.gz" "$ci_url" 2>/dev/null; then
+                tar -xzf "$ci_tmp/curl-impersonate.tar.gz" -C "$ci_tmp" 2>/dev/null || true
+                if [ -f "$ci_tmp/curl-impersonate-ff" ]; then
+                    mv "$ci_tmp/curl-impersonate-ff" "$INSTALL_DIR/curl-impersonate-ff"
+                    chmod 755 "$INSTALL_DIR/curl-impersonate-ff"
+                    # Copy bundled NSS libs if present
+                    find "$ci_tmp" -name "*.so*" -exec cp {} "$INSTALL_DIR/" \; 2>/dev/null || true
+                    echo -e "  ${NC}curl-impersonate installed → $INSTALL_DIR/curl-impersonate-ff"
+                    installed_ci=true
+                fi
+            fi
+            rm -rf "$ci_tmp"
+            if [ "$installed_ci" = "false" ]; then
+                echo -e "  ${ORANGE}curl-impersonate: install from https://github.com/lwthiker/curl-impersonate${NC}"
+            fi
+        fi
+    elif [ "$os" = "darwin" ] && command -v brew >/dev/null 2>&1; then
+        echo -e "${MUTED}  Installing curl-impersonate via Homebrew...${NC}"
+        brew install --quiet curl-impersonate 2>/dev/null && \
+            echo -e "  ${NC}curl-impersonate installed" || \
+            echo -e "  ${ORANGE}curl-impersonate: brew install failed — install from https://github.com/lwthiker/curl-impersonate${NC}"
+    else
+        echo -e "${MUTED}  curl-impersonate: install from https://github.com/lwthiker/curl-impersonate${NC}"
+    fi
+
+    # ── carbonyl ──────────────────────────────────────────────────────────────
+    # Full Chromium-based terminal browser. Downloads a ~130MB binary.
+    # Skipped on Windows and unsupported platforms.
+    if command -v carbonyl >/dev/null 2>&1 || [ -f "$INSTALL_DIR/carbonyl" ]; then
+        echo -e "${MUTED}  ✓ carbonyl already installed${NC}"
+    elif [ "$os" = "windows" ]; then
+        echo -e "${MUTED}  carbonyl: not supported on Windows, skipping${NC}"
+    else
+        # Map to carbonyl release target names
+        carb_target=""
+        case "${combo:-}" in
+            linux-x64)    carb_target="linux-x64" ;;
+            linux-arm64)  carb_target="linux-arm64" ;;
+            darwin-x64)   carb_target="macos-x64" ;;
+            darwin-arm64) carb_target="macos-arm64" ;;
+        esac
+
+        if [ -z "$carb_target" ]; then
+            echo -e "${MUTED}  carbonyl: unsupported platform, skipping${NC}"
+        else
+            echo -e "${MUTED}  Installing carbonyl (full terminal web browser, ~130MB)...${NC}"
+            carb_url="https://github.com/fathyb/carbonyl/releases/latest/download/carbonyl-${carb_target}.tar.gz"
+            carb_tmp="${TMPDIR:-/tmp}/carbonyl_install_$$"
+            mkdir -p "$carb_tmp"
+            installed_carb=false
+
+            if ! command -v tar >/dev/null 2>&1; then
+                echo -e "  ${ORANGE}carbonyl: tar not found, skipping${NC}"
+            elif ! [ -t 2 ] || ! download_with_progress "$carb_url" "$carb_tmp/carbonyl.tar.gz"; then
+                # fallback to standard curl
+                curl -# -fsSL -o "$carb_tmp/carbonyl.tar.gz" "$carb_url" 2>/dev/null && \
+                    tar -xzf "$carb_tmp/carbonyl.tar.gz" -C "$carb_tmp" 2>/dev/null && \
+                    installed_carb=true || true
+            else
+                tar -xzf "$carb_tmp/carbonyl.tar.gz" -C "$carb_tmp" 2>/dev/null && installed_carb=true || true
+            fi
+
+            if [ "$installed_carb" = "true" ] && [ -f "$carb_tmp/carbonyl" ]; then
+                mv "$carb_tmp/carbonyl" "$INSTALL_DIR/carbonyl"
+                chmod 755 "$INSTALL_DIR/carbonyl"
+                echo -e "  ${NC}carbonyl installed → $INSTALL_DIR/carbonyl"
+            elif [ "$installed_carb" = "false" ]; then
+                echo -e "  ${ORANGE}carbonyl: download failed — install from https://github.com/fathyb/carbonyl${NC}"
+            fi
+            rm -rf "$carb_tmp"
+        fi
+    fi
+}
+
+if [ "$no_optional" != "true" ] && [ -z "$binary_path" ]; then
+    install_optional_deps
+fi
 
 add_to_path() {
     local config_file=$1
@@ -366,9 +548,9 @@ add_to_path() {
     if grep -Fxq "$command" "$config_file"; then
         print_message info "Command already exists in $config_file, skipping write."
     elif [[ -w $config_file ]]; then
-        echo -e "\n# opencode" >> "$config_file"
+        echo -e "\n# opensurfer" >> "$config_file"
         echo "$command" >> "$config_file"
-        print_message info "${MUTED}Successfully added ${NC}opencode ${MUTED}to \$PATH in ${NC}$config_file"
+        print_message info "${MUTED}Successfully added ${NC}opensurfer ${MUTED}to \$PATH in ${NC}$config_file"
     else
         print_message warning "Manually add the directory to $config_file (or similar):"
         print_message info "  $command"
@@ -444,17 +626,16 @@ if [ -n "${GITHUB_ACTIONS-}" ] && [ "${GITHUB_ACTIONS}" == "true" ]; then
 fi
 
 echo -e ""
-echo -e "${MUTED}                    ${NC}             ▄     "
-echo -e "${MUTED}█▀▀█ █▀▀█ █▀▀█ █▀▀▄ ${NC}█▀▀▀ █▀▀█ █▀▀█ █▀▀█"
-echo -e "${MUTED}█░░█ █░░█ █▀▀▀ █░░█ ${NC}█░░░ █░░█ █░░█ █▀▀▀"
-echo -e "${MUTED}▀▀▀▀ █▀▀▀ ▀▀▀▀ ▀  ▀ ${NC}▀▀▀▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀"
+echo -e "${MUTED}                    ${NC}                    ▄     "
+echo -e "${MUTED}█▀▀█ █▀▀█ █▀▀█ █▀▀▄ ${NC}█▀▀▀ █  █ █▀▀▄ █▀▀▀ █▀▀█ █▀▀▄"
+echo -e "${MUTED}█  █ █  █ █▀▀▀ █  █ ${NC}▀▀▀█ █  █ █▀▄  █▀▀▀ █▀▀▀ █▀▄ "
+echo -e "${MUTED}▀▀▀▀ █▀▀▀ ▀▀▀▀ ▀  ▀ ${NC}▀▀▀▀ ▀▀▀▀ ▀  ▀ ▀    ▀▀▀▀ ▀  ▀"
 echo -e ""
 echo -e ""
-echo -e "${MUTED}OpenCode includes free models, to start:${NC}"
+echo -e "${MUTED}OpenSurfer works with any AI provider. To start:${NC}"
 echo -e ""
-echo -e "cd <project>  ${MUTED}# Open directory${NC}"
-echo -e "opencode      ${MUTED}# Run command${NC}"
+echo -e "opensurfer      ${MUTED}# Launch the research agent${NC}"
 echo -e ""
-echo -e "${MUTED}For more information visit ${NC}https://opencode.ai/docs"
+echo -e "${MUTED}For more information visit ${NC}https://github.com/PewterZz/opensurfer"
 echo -e ""
 echo -e ""
