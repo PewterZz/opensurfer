@@ -1,11 +1,11 @@
 name: deploy
 
 on:
-  push:
-    branches:
-      - dev
-      - production
   workflow_dispatch:
+    inputs:
+      _disabled:
+        description: "This workflow is disabled (upstream opencode.ai infra not used by OpenSurfer)"
+        required: false
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
