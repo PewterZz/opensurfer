@@ -19,10 +19,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Create GitHub release
+      - name: Create or reset GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Delete existing release + tag if present so we can recreate cleanly
+          gh release delete "v${{ inputs.version }}" --yes 2>/dev/null || true
+          git push origin ":refs/tags/v${{ inputs.version }}" 2>/dev/null || true
           gh release create "v${{ inputs.version }}" \
             --title "v${{ inputs.version }}" \
             --generate-notes \
@@ -35,7 +38,9 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            platform: linux
+            platform: linux-x64
+          - os: ubuntu-24.04-arm
+            platform: linux-arm64
           - os: macos-latest
             platform: darwin
     runs-on: ${{ matrix.os }}
@@ -57,7 +62,7 @@ jobs:
           OPENCODE_RELEASE: "true"
           GH_REPO: PewterZz/opensurfer
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: bun script/build.ts --skip-embed-web-ui
+        run: bun script/build.ts --single --skip-embed-web-ui
 
   publish-release:
     needs: build
