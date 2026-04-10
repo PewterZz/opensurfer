@@ -33,14 +33,14 @@ describe("memory: abort controller leak", () => {
         const tool = await WebFetchTool.init()
 
         // Warm up
-        await tool.execute({ url: "https://example.com", format: "text" }, ctx).catch(() => {})
+        await tool.execute({ url: "https://example.com", format: "text", page: 0 }, ctx).catch(() => {})
 
         Bun.gc(true)
         const baseline = getHeapMB()
 
         // Run many fetches
         for (let i = 0; i < ITERATIONS; i++) {
-          await tool.execute({ url: "https://example.com", format: "text" }, ctx).catch(() => {})
+          await tool.execute({ url: "https://example.com", format: "text", page: 0 }, ctx).catch(() => {})
         }
 
         Bun.gc(true)

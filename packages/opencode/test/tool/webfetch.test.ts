@@ -33,7 +33,7 @@ describe("tool.webfetch", () => {
           fn: async () => {
             const webfetch = await WebFetchTool.init()
             const result = await webfetch.execute(
-              { url: new URL("/image.png", url).toString(), format: "markdown" },
+              { url: new URL("/image.png", url).toString(), format: "markdown", page: 0 },
               ctx,
             )
             expect(result.output).toBe("Image fetched successfully")
@@ -64,7 +64,7 @@ describe("tool.webfetch", () => {
           directory: projectRoot,
           fn: async () => {
             const webfetch = await WebFetchTool.init()
-            const result = await webfetch.execute({ url: new URL("/image.svg", url).toString(), format: "html" }, ctx)
+            const result = await webfetch.execute({ url: new URL("/image.svg", url).toString(), format: "html", page: 0 }, ctx)
             expect(result.output).toContain("<svg")
             expect(result.attachments).toBeUndefined()
           },
@@ -85,7 +85,7 @@ describe("tool.webfetch", () => {
           directory: projectRoot,
           fn: async () => {
             const webfetch = await WebFetchTool.init()
-            const result = await webfetch.execute({ url: new URL("/file.txt", url).toString(), format: "text" }, ctx)
+            const result = await webfetch.execute({ url: new URL("/file.txt", url).toString(), format: "text", page: 0 }, ctx)
             expect(result.output).toBe("hello from webfetch")
             expect(result.attachments).toBeUndefined()
           },

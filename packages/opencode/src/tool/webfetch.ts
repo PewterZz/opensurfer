@@ -2112,7 +2112,7 @@ export const WebFetchTool = Tool.define("webfetch", {
       return {
         title,
         output: "Image fetched successfully",
-        metadata: {},
+        metadata: { type: "image" },
         attachments: [
           {
             type: "file",
@@ -2133,7 +2133,7 @@ export const WebFetchTool = Tool.define("webfetch", {
           // For Wikipedia, use the Extracts API — much cleaner and more compact
           const wikiContent = await fetchWikipediaArticle(params.url, signal)
           if (wikiContent) {
-            return { output: paginate(wikiContent, page, params.url), title, metadata: {} }
+            return { output: paginate(wikiContent, page, params.url), title, metadata: { type: "fetch" } }
           }
 
           const markdown = convertHTMLToMarkdown(content)
@@ -2143,52 +2143,52 @@ export const WebFetchTool = Tool.define("webfetch", {
             // Tier 1: extract SSR-embedded data (Next.js, Nuxt, JSON-LD) — local, no deps
             const ssr = extractSsrContent(content)
             if (ssr && ssr.length > 100) {
-              return { output: paginate(ssr, page, params.url), title, metadata: { jsWall: "ssr" } }
+              return { output: paginate(ssr, page, params.url), title, metadata: { type: "fetch" } }
             }
 
             // Tier 2: Jina Reader — opt-in via OPENSURFER_JINA_FALLBACK=1
             const jina = await fetchWithJina(params.url, signal)
             if (jina && jina.length > 100) {
-              return { output: paginate(jina, page, params.url), title, metadata: { jsWall: "jina" } }
+              return { output: paginate(jina, page, params.url), title, metadata: { type: "fetch" } }
             }
 
             // Tier 3: Wayback Machine — public archive snapshot
             const wayback = await fetchFromWayback(params.url, signal)
             if (wayback && wayback.length > 100) {
-              return { output: paginate(`_[Archived snapshot via Wayback Machine]_\n\n${wayback}`, page, params.url), title, metadata: { jsWall: "wayback" } }
+              return { output: paginate(`_[Archived snapshot via Wayback Machine]_\n\n${wayback}`, page, params.url), title, metadata: { type: "fetch" } }
             }
 
             // All fallbacks failed — return a clear error
             return {
               output: `This page requires JavaScript to render its content and no cached/alternative version was available.\n\nTo enable Jina Reader fallback (which renders JS server-side), set the environment variable:\n  OPENSURFER_JINA_FALLBACK=1`,
               title,
-              metadata: { jsWall: "blocked" },
+              metadata: { type: "fetch" },
             }
           }
 
-          return { output: paginate(markdown, page, params.url), title, metadata: {} }
+          return { output: paginate(markdown, page, params.url), title, metadata: { type: "fetch" } }
         }
-        return { output: paginate(content, page, params.url), title, metadata: {} }
+        return { output: paginate(content, page, params.url), title, metadata: { type: "fetch" } }
 
       case "text":
         if (contentType.includes("text/html")) {
           const text = await extractTextFromHTML(content)
-          return { output: paginate(text, page, params.url), title, metadata: {} }
+          return { output: paginate(text, page, params.url), title, metadata: { type: "fetch" } }
         }
-        return { output: paginate(content, page, params.url), title, metadata: {} }
+        return { output: paginate(content, page, params.url), title, metadata: { type: "fetch" } }
 
       case "html":
         return {
           output: content,
           title,
-          metadata: {},
+          metadata: { type: "fetch" },
         }
 
       default:
         return {
           output: content,
           title,
-          metadata: {},
+          metadata: { type: "fetch" },
         }
     }
   },

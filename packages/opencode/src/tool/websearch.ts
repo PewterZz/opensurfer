@@ -465,7 +465,7 @@ export const WebSearchTool = Tool.define("websearch", async () => {
         return {
           output: formatResults(results, params.query),
           title: `Search: ${params.query}`,
-          metadata: { source: sources, urls: metadataUrls(results, params.query) },
+          metadata: { source: sources, instance: "bing+duckduckgo", urls: metadataUrls(results, params.query) },
         }
       } catch (error) {
         clearTimeout()

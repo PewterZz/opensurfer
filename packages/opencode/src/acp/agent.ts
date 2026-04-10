@@ -1636,7 +1636,7 @@ export namespace ACP {
     const opencodeProvider = providers.find((p) => p.id === "opencode")
     if (opencodeProvider) {
       if (opencodeProvider.models["big-pickle"]) {
-        return { providerID: ProviderID.opensurfer, modelID: ModelID.make("big-pickle") }
+        return { providerID: ProviderID.opencode, modelID: ModelID.make("big-pickle") }
       }
       const [best] = Provider.sort(Object.values(opencodeProvider.models))
       if (best) {
@@ -1658,7 +1658,7 @@ export namespace ACP {
 
     if (specified) return specified
 
-    return { providerID: ProviderID.opensurfer, modelID: ModelID.make("big-pickle") }
+    return { providerID: ProviderID.opencode, modelID: ModelID.make("big-pickle") }
   }
 
   function parseUri(

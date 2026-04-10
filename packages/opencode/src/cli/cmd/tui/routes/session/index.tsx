@@ -286,7 +286,7 @@ export function Session() {
 
   useKeyboard((evt) => {
     if (session()?.parentID) return
-    if (evt.ctrl && evt.key === "l" && hasLinks()) {
+    if (evt.ctrl && evt.name === "l" && hasLinks()) {
       setActiveTab((t) => (t === "links" ? "agent" : "links"))
     }
   })
@@ -2081,7 +2081,7 @@ function WebSearch(props: ToolProps<any>) {
           <For each={urls().slice(0, 6)}>
             {(u) => (
               <text fg={theme.textMuted}>
-                <span fg={theme.accent}>·</span> {hostname(u.url)}
+                <text fg={theme.accent}>· </text>{hostname(u.url)}
               </text>
             )}
           </For>
