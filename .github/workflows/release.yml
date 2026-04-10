@@ -70,6 +70,12 @@ jobs:
           NAME="opensurfer-${TARGET}"
           BIN="dist/${NAME}/bin"
 
+          # On macOS: strip any corrupt signature from the build and apply a clean ad-hoc one
+          if [[ "$TARGET" == darwin* ]]; then
+            codesign --remove-signature "${BIN}/opensurfer" 2>/dev/null || true
+            codesign --sign - --force "${BIN}/opensurfer"
+          fi
+
           if [[ "$TARGET" == linux* ]]; then
             ARCHIVE="${NAME}.tar.gz"
             tar -czf "$ARCHIVE" -C "$BIN" opensurfer
