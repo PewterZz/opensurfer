@@ -1,4 +1,4 @@
-import { Effect, Layer, ServiceMap, Stream } from "effect"
+import { Effect, Layer, ServiceMap } from "effect"
 import { formatPatch, structuredPatch } from "diff"
 import path from "path"
 import { Bus } from "@/bus"
@@ -6,7 +6,6 @@ import { BusEvent } from "@/bus/bus-event"
 import { InstanceState } from "@/effect/instance-state"
 import { makeRuntime } from "@/effect/run-service"
 import { AppFileSystem } from "@/filesystem"
-import { FileWatcher } from "@/file/watcher"
 import { Git } from "@/git"
 import { Log } from "@/util/log"
 import { Instance } from "./instance"
@@ -166,29 +165,11 @@ export namespace Vcs {
             return { current: undefined, root: undefined }
           }
 
-          const get = Effect.fnUntraced(function* () {
-            return yield* git.branch(ctx.directory)
-          })
           const [current, root] = yield* Effect.all([git.branch(ctx.directory), git.defaultBranch(ctx.directory)], {
             concurrency: 2,
           })
           const value = { current, root }
           log.info("initialized", { branch: value.current, default_branch: value.root?.name })
-
-          yield* bus.subscribe(FileWatcher.Event.Updated).pipe(
-            Stream.filter((evt) => evt.properties.file.endsWith("HEAD")),
-            Stream.runForEach((_evt) =>
-              Effect.gen(function* () {
-                const next = yield* get()
-                if (next !== value.current) {
-                  log.info("branch changed", { from: value.current, to: next })
-                  value.current = next
-                  yield* bus.publish(Event.BranchUpdated, { branch: next })
-                }
-              }),
-            ),
-            Effect.forkScoped,
-          )
 
           return value
         }),

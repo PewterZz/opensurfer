@@ -21,7 +21,6 @@ import { WebSearchTool } from "./websearch"
 import { CodeSearchTool } from "./codesearch"
 import { Flag } from "@/flag/flag"
 import { Log } from "@/util/log"
-import { LspTool } from "./lsp"
 import { Truncate } from "./truncate"
 import { ApplyPatchTool } from "./apply_patch"
 import { Glob } from "../util/glob"
@@ -33,7 +32,6 @@ import { makeRuntime } from "@/effect/run-service"
 import { Env } from "../env"
 import { Question } from "../question"
 import { Todo } from "../session/todo"
-import { LSP } from "../lsp"
 import { FileTime } from "../file/time"
 import { Instruction } from "../session/instruction"
 import { AppFileSystem } from "../filesystem"
@@ -76,7 +74,6 @@ export namespace ToolRegistry {
     | Todo.Service
     | Agent.Service
     | Skill.Service
-    | LSP.Service
     | FileTime.Service
     | Instruction.Service
     | AppFileSystem.Service
@@ -164,7 +161,6 @@ export namespace ToolRegistry {
             skill: Tool.init(SkillTool),
             patch: Tool.init(ApplyPatchTool),
             question: Tool.init(question),
-            lsp: Tool.init(LspTool),
             plan: Tool.init(PlanExitTool),
           })
 
@@ -186,7 +182,6 @@ export namespace ToolRegistry {
               tool.code,
               tool.skill,
               tool.patch,
-              ...(Flag.OPENSURFER_EXPERIMENTAL_LSP_TOOL ? [tool.lsp] : []),
               ...(Flag.OPENSURFER_EXPERIMENTAL_PLAN_MODE && Flag.OPENSURFER_CLIENT === "cli" ? [tool.plan] : []),
             ],
             task: tool.task,
@@ -293,7 +288,6 @@ export namespace ToolRegistry {
       Layer.provide(Todo.defaultLayer),
       Layer.provide(Skill.defaultLayer),
       Layer.provide(Agent.defaultLayer),
-      Layer.provide(LSP.defaultLayer),
       Layer.provide(FileTime.defaultLayer),
       Layer.provide(Instruction.defaultLayer),
       Layer.provide(AppFileSystem.defaultLayer),

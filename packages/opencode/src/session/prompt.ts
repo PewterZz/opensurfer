@@ -21,7 +21,6 @@ import BUILD_SWITCH from "../session/prompt/build-switch.txt"
 import MAX_STEPS from "../session/prompt/max-steps.txt"
 import { ToolRegistry } from "../tool/registry"
 import { MCP } from "../mcp"
-import { LSP } from "../lsp"
 import { FileTime } from "../file/time"
 import { Flag } from "../flag/flag"
 import { ulid } from "ulid"
@@ -91,7 +90,6 @@ export namespace SessionPrompt {
       const permission = yield* Permission.Service
       const fsys = yield* AppFileSystem.Service
       const mcp = yield* MCP.Service
-      const lsp = yield* LSP.Service
       const filetime = yield* FileTime.Service
       const registry = yield* ToolRegistry.Service
       const truncate = yield* Truncate.Service
@@ -1058,24 +1056,8 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                   let limit: number | undefined
                   const range = { start: url.searchParams.get("start"), end: url.searchParams.get("end") }
                   if (range.start != null) {
-                    const filePathURI = part.url.split("?")[0]
-                    let start = parseInt(range.start)
-                    let end = range.end ? parseInt(range.end) : undefined
-                    if (start === end) {
-                      const symbols = yield* lsp
-                        .documentSymbol(filePathURI)
-                        .pipe(Effect.catch(() => Effect.succeed([])))
-                      for (const symbol of symbols) {
-                        let r: LSP.Range | undefined
-                        if ("range" in symbol) r = symbol.range
-                        else if ("location" in symbol) r = symbol.location.range
-                        if (r?.start?.line && r?.start?.line === start) {
-                          start = r.start.line
-                          end = r?.end?.line ?? start
-                          break
-                        }
-                      }
-                    }
+                    const start = parseInt(range.start)
+                    const end = range.end ? parseInt(range.end) : undefined
                     offset = Math.max(start, 1)
                     if (end) limit = end - (offset - 1)
                   }
@@ -1675,7 +1657,6 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       Layer.provide(Command.defaultLayer),
       Layer.provide(Permission.defaultLayer),
       Layer.provide(MCP.defaultLayer),
-      Layer.provide(LSP.defaultLayer),
       Layer.provide(FileTime.defaultLayer),
       Layer.provide(ToolRegistry.defaultLayer),
       Layer.provide(Truncate.defaultLayer),

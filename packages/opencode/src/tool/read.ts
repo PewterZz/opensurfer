@@ -1,12 +1,11 @@
 import z from "zod"
-import { Effect, Scope } from "effect"
+import { Effect } from "effect"
 import { createReadStream } from "fs"
 import { open } from "fs/promises"
 import * as path from "path"
 import { createInterface } from "readline"
 import { Tool } from "./tool"
 import { AppFileSystem } from "../filesystem"
-import { LSP } from "../lsp"
 import { FileTime } from "../file/time"
 import DESCRIPTION from "./read.txt"
 import { Instance } from "../project/instance"
@@ -30,9 +29,7 @@ export const ReadTool = Tool.defineEffect(
   Effect.gen(function* () {
     const fs = yield* AppFileSystem.Service
     const instruction = yield* Instruction.Service
-    const lsp = yield* LSP.Service
     const time = yield* FileTime.Service
-    const scope = yield* Scope.Scope
 
     const miss = Effect.fn("ReadTool.miss")(function* (filepath: string) {
       const dir = path.dirname(filepath)
@@ -76,7 +73,6 @@ export const ReadTool = Tool.defineEffect(
     })
 
     const warm = Effect.fn("ReadTool.warm")(function* (filepath: string, sessionID: Tool.Context["sessionID"]) {
-      yield* lsp.touchFile(filepath, false).pipe(Effect.ignore, Effect.forkIn(scope))
       yield* time.read(sessionID, filepath)
     })
 

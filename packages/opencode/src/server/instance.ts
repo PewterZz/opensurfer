@@ -6,14 +6,12 @@ import z from "zod"
 import { createHash } from "node:crypto"
 import * as fs from "node:fs/promises"
 import { Log } from "../util/log"
-import { Format } from "../format"
 import { TuiRoutes } from "./routes/tui"
 import { Instance } from "../project/instance"
 import { Vcs } from "../project/vcs"
 import { Agent } from "../agent/agent"
 import { Skill } from "../skill"
 import { Global } from "../global"
-import { LSP } from "../lsp"
 import { Command } from "../command"
 import { Flag } from "../flag/flag"
 import { QuestionRoutes } from "./routes/question"
@@ -236,48 +234,6 @@ export const InstanceRoutes = (upgrade: UpgradeWebSocket, app: Hono = new Hono()
       async (c) => {
         const skills = await Skill.all()
         return c.json(skills)
-      },
-    )
-    .get(
-      "/lsp",
-      describeRoute({
-        summary: "Get LSP status",
-        description: "Get LSP server status",
-        operationId: "lsp.status",
-        responses: {
-          200: {
-            description: "LSP server status",
-            content: {
-              "application/json": {
-                schema: resolver(LSP.Status.array()),
-              },
-            },
-          },
-        },
-      }),
-      async (c) => {
-        return c.json(await LSP.status())
-      },
-    )
-    .get(
-      "/formatter",
-      describeRoute({
-        summary: "Get formatter status",
-        description: "Get formatter status",
-        operationId: "formatter.status",
-        responses: {
-          200: {
-            description: "Formatter status",
-            content: {
-              "application/json": {
-                schema: resolver(Format.Status.array()),
-              },
-            },
-          },
-        },
-      }),
-      async (c) => {
-        return c.json(await Format.status())
       },
     )
     .all("/*", async (c) => {

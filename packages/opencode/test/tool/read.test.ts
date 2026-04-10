@@ -5,7 +5,6 @@ import { Agent } from "../../src/agent/agent"
 import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
 import { AppFileSystem } from "../../src/filesystem"
 import { FileTime } from "../../src/file/time"
-import { LSP } from "../../src/lsp"
 import { Permission } from "../../src/permission"
 import { Instance } from "../../src/project/instance"
 import { SessionID, MessageID } from "../../src/session/schema"
@@ -40,7 +39,6 @@ const it = testEffect(
     CrossSpawnSpawner.defaultLayer,
     FileTime.defaultLayer,
     Instruction.defaultLayer,
-    LSP.defaultLayer,
   ),
 )
 
