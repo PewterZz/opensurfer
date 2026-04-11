@@ -62,7 +62,7 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
             <text fg={theme.textMuted}>
               <span style={{ fg: theme.success }}>•</span> <b>Open</b>
               <span style={{ fg: theme.text }}>
-                <b>Code</b>
+                <b>Surfer</b>
               </span>{" "}
               <span>{Installation.VERSION}</span>
             </text>
