@@ -1769,7 +1769,13 @@ function InlineTool(props: {
         </Match>
       </Switch>
       <Show when={error() && !denied()}>
-        <text fg={theme.error}>{error()}</text>
+        <text fg={theme.textMuted} paddingLeft={3}>
+          {"couldn't complete · "}
+          <span fg={theme.error}>
+            {(error() ?? "").split("\n")[0].slice(0, 80)}
+            {(error() ?? "").split("\n")[0].length > 80 ? "…" : ""}
+          </span>
+        </text>
       </Show>
     </box>
   )
@@ -1816,7 +1822,13 @@ function BlockTool(props: {
       </Show>
       {props.children}
       <Show when={error()}>
-        <text fg={theme.error}>{error()}</text>
+        <text fg={theme.textMuted}>
+          {"couldn't complete · "}
+          <span fg={theme.error}>
+            {(error() ?? "").split("\n")[0].slice(0, 80)}
+            {(error() ?? "").split("\n")[0].length > 80 ? "…" : ""}
+          </span>
+        </text>
       </Show>
     </box>
   )
@@ -1983,7 +1995,7 @@ function WebFetch(props: ToolProps<typeof WebFetchTool>) {
     try { return new URL(u).hostname.replace(/^www\./, "") } catch { return u }
   }
   return (
-    <InlineTool icon="⊕" pending="Fetching page..." complete={url} part={props.part}>
+    <InlineTool icon="⊕" pending="Reading page..." complete={url} part={props.part}>
       {hostname(url)}
     </InlineTool>
   )
@@ -2043,7 +2055,7 @@ function WebSearch(props: ToolProps<any>) {
           when={isRunning()}
           fallback={
             <text fg={theme.textMuted}>
-              ~ {input.query}
+              ↳ {input.query}
             </text>
           }
         >
@@ -2051,7 +2063,7 @@ function WebSearch(props: ToolProps<any>) {
             when={kv.get("animations_enabled", true)}
             fallback={
               <text fg={theme.text}>
-                ~ Searching {input.query}
+                ↳ Searching {input.query}
               </text>
             }
           >
