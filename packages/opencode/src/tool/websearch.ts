@@ -5,7 +5,8 @@ import { abortAfterAny } from "../util/abort"
 
 const DEFAULT_NUM_RESULTS = 8
 
-const BROWSER_UA = "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"
+const BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+const SEC_CH_UA = '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"'
 
 /**
  * Detect the best available HTTP client in priority order:
@@ -17,7 +18,13 @@ let curlBin: string | null | undefined = undefined // undefined = not yet detect
 
 async function detectCurlBin(): Promise<string | null> {
   if (curlBin !== undefined) return curlBin
-  for (const bin of ["curl-impersonate-ff", "curl-impersonate", "curl"]) {
+  const home = process.env.HOME ?? ""
+  for (const bin of [
+    `${home}/.local/bin/curl-impersonate`,
+    "curl-impersonate-ff",
+    "curl-impersonate",
+    "curl",
+  ]) {
     try {
       const p = Bun.spawn([bin, "--version"], { stdout: "ignore", stderr: "ignore", stdin: "ignore" })
       await p.exited
@@ -47,15 +54,23 @@ async function httpFetch(
   const bin = await detectCurlBin()
 
   if (bin) {
-    // -f: exit non-zero on HTTP 4xx/5xx (fix 2: detect bot-challenge pages/rate-limits)
-    const args = [bin, "-sS", "-f", "-L", "--max-time", "20", "--compressed"]
+    const args = [bin, "-sS", "-L", "--max-time", "20", "--compressed"]
+    // curl-impersonate needs --impersonate <browser> to activate Chrome fingerprinting
+    if (bin.includes("curl-impersonate")) args.push("--impersonate", "chrome131")
     if (opts.cookieJar) args.push("-b", opts.cookieJar, "-c", opts.cookieJar)
     const headers = {
       "User-Agent": BROWSER_UA,
-      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-      "Accept-Language": "en-US,en;q=0.5",
-      DNT: "1",
+      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Cache-Control": "max-age=0",
       "Upgrade-Insecure-Requests": "1",
+      "sec-ch-ua": SEC_CH_UA,
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": '"Windows"',
+      "Sec-Fetch-Dest": "document",
+      "Sec-Fetch-Mode": "navigate",
+      "Sec-Fetch-Site": "none",
+      "Sec-Fetch-User": "?1",
       ...opts.headers,
     }
     for (const [k, v] of Object.entries(headers)) args.push("-H", `${k}: ${v}`)
@@ -85,11 +100,13 @@ async function httpFetch(
     signal: opts.signal,
     headers: {
       "User-Agent": BROWSER_UA,
-      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      "Accept-Language": "en-US,en;q=0.5",
+      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+      "Accept-Language": "en-US,en;q=0.9",
       "Cache-Control": "max-age=0",
-      DNT: "1",
       "Upgrade-Insecure-Requests": "1",
+      "sec-ch-ua": SEC_CH_UA,
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": '"Windows"',
       "Sec-Fetch-Dest": "document",
       "Sec-Fetch-Mode": "navigate",
       "Sec-Fetch-Site": opts.method === "POST" ? "same-origin" : "none",
@@ -122,11 +139,11 @@ function normaliseUrl(url: string): string {
 function decodeBingUrl(href: string): string {
   if (!href.includes("bing.com/ck/a") && !href.includes("/ck/a?")) return href
   try {
-    const u = new URL(href.startsWith("/") ? `https://www.bing.com${href}` : href)
-    const uParam = u.searchParams.get("u") ?? ""
-    if (!uParam.startsWith("a1")) return href
-    const b64 = uParam.slice(2)
-    // Try base64url first, then fall back to standard base64
+    // Use regex instead of URLSearchParams — URLSearchParams.get() decodes + as space,
+    // which corrupts the base64 payload and causes all non-Twitch results to be dropped.
+    const rawMatch = href.match(/[?&]u=(a1[A-Za-z0-9+/=_-]+)/)
+    if (!rawMatch) return href
+    const b64 = rawMatch[1].slice(2) // strip "a1" prefix
     for (const enc of ["base64url", "base64"] as const) {
       try {
         const decoded = Buffer.from(b64, enc).toString("utf8")
@@ -150,12 +167,15 @@ async function searchBing(
   numResults: number,
   signal: AbortSignal,
 ): Promise<SearchResult[]> {
-  // httpFetch uses curl/curl-impersonate to avoid TLS fingerprint detection.
-  // Use a per-request unique jar path (fix 3: prevents concurrent searches racing on the same file).
+  // Bing serves degraded results (single-site flood) to first-time visitors without a MUID
+  // cookie. Pre-warm the session by hitting the homepage first — this sets MUID and other
+  // session cookies, making Bing treat us as a real returning user.
   const jar = `/tmp/opensurfer_bing_${Date.now()}_${Math.random().toString(36).slice(2)}.jar`
   const url = `https://www.bing.com/search?q=${encodeURIComponent(query)}&count=${numResults}&mkt=en-US&setlang=en-US&cc=US`
   let html: string
   try {
+    // Homepage visit to collect MUID session cookie
+    await httpFetch("https://www.bing.com/", { cookieJar: jar, signal }).catch(() => {})
     html = await httpFetch(url, {
       headers: { Referer: "https://www.bing.com/" },
       cookieJar: jar,
@@ -183,14 +203,16 @@ async function searchBing(
 
     // Skip Bing-internal / navigation URLs and non-HTTP
     if (!href.startsWith("http")) continue
+    // Skip URLs with wildcard characters (Bing sometimes emits "domain/*" expansion links)
+    if (href.includes("*")) continue
     try {
       const host = new URL(href).hostname
       if (host.includes("bing.") || host.includes("microsoft.")) continue
     } catch { continue }
 
-    const key = normaliseUrl(href)
-    if (seen.has(key)) continue
-    seen.add(key)
+    const canonical = normaliseUrl(href)
+    if (seen.has(canonical)) continue
+    seen.add(canonical)
 
     const title = linkMatch[2].replace(/<[^>]+>/g, "").trim()
     if (!title) continue
@@ -199,7 +221,45 @@ async function searchBing(
     const snippetMatch = chunk.match(/<p[^>]*>([\s\S]{15,400}?)<\/p>/)
     const snippet = snippetMatch ? snippetMatch[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : ""
 
-    results.push({ title, url: href, snippet, engine: "bing" })
+    results.push({ title, url: canonical, snippet, engine: "bing" })
+  }
+
+  return results
+}
+
+// Scrape Mojeek HTML results (independent index, no bot detection on datacenter IPs)
+async function searchMojeek(
+  query: string,
+  numResults: number,
+  signal: AbortSignal,
+): Promise<SearchResult[]> {
+  const url = `https://www.mojeek.com/search?q=${encodeURIComponent(query)}&hp=1`
+  const html = await httpFetch(url, {
+    headers: { Referer: "https://www.mojeek.com/" },
+    signal,
+  })
+
+  const results: SearchResult[] = []
+  const seen = new Set<string>()
+
+  // Results are wrapped in <!--rs-->...<!--re--> comment markers
+  const chunks = html.split("<!--rs-->")
+  for (let i = 1; i < chunks.length && results.length < numResults; i++) {
+    const chunk = chunks[i]
+    // Title link: <a class="title" href="URL">Title</a>
+    const linkMatch = chunk.match(/<a[^>]+class="title"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/)
+    if (!linkMatch) continue
+    const href = linkMatch[1]
+    if (!href.startsWith("http")) continue
+    const canonical = normaliseUrl(href) // also converts amp. subdomains
+    if (seen.has(canonical)) continue
+    seen.add(canonical)
+    const title = linkMatch[2].replace(/<[^>]+>/g, "").trim()
+    if (!title) continue
+    // Snippet: <p class="s">...</p>
+    const snippetMatch = chunk.match(/<p class="s">([\s\S]*?)<\/p>/)
+    const snippet = snippetMatch ? snippetMatch[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : ""
+    results.push({ title, url: canonical, snippet, engine: "mojeek" })
   }
 
   return results
@@ -225,6 +285,9 @@ async function searchDuckDuckGo(
       headers: {
         Origin: "https://html.duckduckgo.com",
         Referer: "https://html.duckduckgo.com/",
+        "Sec-Fetch-Site": "same-origin",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Dest": "document",
       },
       cookieJar: jar,
       signal,
@@ -257,9 +320,9 @@ async function searchDuckDuckGo(
     } catch { /* keep original */ }
 
     if (!href.startsWith("http")) continue
-    const key = normaliseUrl(href)
-    if (seen.has(key)) continue
-    seen.add(key)
+    const canonical = normaliseUrl(href)
+    if (seen.has(canonical)) continue
+    seen.add(canonical)
 
     const title = linkMatch[2].replace(/<[^>]+>/g, "").trim()
     if (!title) continue
@@ -269,7 +332,7 @@ async function searchDuckDuckGo(
       ?? chunk.match(/<div[^>]+class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/div>/)
     const snippet = snippetMatch ? snippetMatch[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : ""
 
-    results.push({ title, url: href, snippet, engine: "ddg" })
+    results.push({ title, url: canonical, snippet, engine: "ddg" })
   }
 
   return results
@@ -318,6 +381,8 @@ const NOISE_DOMAINS = new Set([
   "kitchenaid.com", "kitchenaidhq.com",
   // Microsoft self-referential
   "learn.microsoft.com", "support.microsoft.com", "answers.microsoft.com",
+  // Google self-referential
+  "support.google.com", "accounts.google.com", "policies.google.com",
   // Bing quiz SEO spam farms
   "bingehomepagequiz.com", "binghomepagequiz.com", "binghomepagequiz.us",
   "bingentertainmentquiz.com", "bingquiz.org", "bingnewsquizz.com",
@@ -422,50 +487,68 @@ export const WebSearchTool = Tool.define("websearch", async () => {
           }
         }
 
-        // 2. Bing + DuckDuckGo in parallel (two independent indexes)
-        // Request extra results from each engine to account for deduplication loss
+        // 2. Bing + DDG + Mojeek in parallel (three independent indexes)
+        // All three work well from residential IPs (most users running locally).
+        // Mojeek is added for extra coverage and as a reliable fallback.
         const fetchCount = Math.ceil(numResults * 1.5)
-        broadcast("bing.com + duckduckgo.com")
-        const [bingRes, ddgRes] = await Promise.allSettled([
+        broadcast("bing.com + duckduckgo.com + mojeek.com")
+        const [bingRes, ddgRes, mojeekRes] = await Promise.allSettled([
           searchBing(params.query, fetchCount, signal).then(async (r) => {
-            // If Bing returned suspiciously few results, retry once with a fresh session
             if (r.length < 2) return searchBing(params.query, fetchCount, signal)
+            // If Bing returns results all from one domain, it's treating this as a
+            // navigational query (e.g. all twitch.tv for a streamer search).
+            // Retry excluding that domain to get informational results.
+            const hosts = r.map(x => { try { return new URL(x.url).hostname.replace(/^www\./, "") } catch { return "" } })
+            const dominant = hosts[0]
+            if (dominant && hosts.filter(h => h === dominant).length >= Math.ceil(r.length * 0.7)) {
+              return searchBing(`${params.query} -site:${dominant}`, fetchCount, signal)
+            }
             return r
           }),
           searchDuckDuckGo(params.query, fetchCount, signal),
+          searchMojeek(params.query, fetchCount, signal),
         ])
 
-        // If the abort signal fired, both engines will have rejected — surface that
-        // as a timeout error rather than silently returning "no results found"
+        // If the abort signal fired, surface that as a timeout error
         if (signal.aborted) throw new DOMException("Aborted", "AbortError")
 
-        // Merge: Bing first, then DDG — deduplicate by normalised URL
+        // Merge: Bing first, then DDG, then Mojeek — deduplicate by normalised URL.
+        // Cap at 2 results per domain so a single site (e.g. twitch.tv returning 10
+        // subpages for a creator query) can't crowd out all other engines.
         const seenKeys = new Set<string>()
+        const domainCount = new Map<string, number>()
+        const MAX_PER_DOMAIN = 2
         const merged: SearchResult[] = []
         const addResults = (list: SearchResult[]) => {
           for (const r of list) {
             if (!r.url.startsWith("http")) continue
             const key = normaliseUrl(r.url)
-            if (!seenKeys.has(key)) {
-              seenKeys.add(key)
-              merged.push(r)
-            }
+            if (seenKeys.has(key)) continue
+            let host = ""
+            try { host = new URL(r.url).hostname.replace(/^www\./, "") } catch { continue }
+            const count = domainCount.get(host) ?? 0
+            if (count >= MAX_PER_DOMAIN) continue
+            seenKeys.add(key)
+            domainCount.set(host, count + 1)
+            merged.push(r)
           }
         }
         if (bingRes.status === "fulfilled") addResults(bingRes.value)
         if (ddgRes.status === "fulfilled") addResults(ddgRes.value)
+        if (mojeekRes.status === "fulfilled") addResults(mojeekRes.value)
 
         const results = merged.slice(0, numResults)
         const sources = [
           bingRes.status === "fulfilled" ? "bing" : null,
           ddgRes.status === "fulfilled" ? "duckduckgo" : null,
+          mojeekRes.status === "fulfilled" ? "mojeek" : null,
         ].filter(Boolean).join("+")
 
         clearTimeout()
         return {
           output: formatResults(results, params.query),
           title: `Search: ${params.query}`,
-          metadata: { source: sources, instance: "bing+duckduckgo", urls: metadataUrls(results, params.query) },
+          metadata: { source: sources, instance: "bing+duckduckgo+mojeek", urls: metadataUrls(results, params.query) },
         }
       } catch (error) {
         clearTimeout()

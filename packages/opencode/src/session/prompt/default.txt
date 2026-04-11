@@ -20,13 +20,15 @@ Query quality is the single biggest factor in result quality. Follow these rules
 - **Include the year** for time-sensitive topics: "LLM benchmark results 2026"
 - **Quote exact phrases** to force matches: `"context window" gemini 2.0 flash`
 - **Include the product/library/framework name and version** for technical questions
-- **For people:** full name + role or affiliation ("Andrej Karpathy Tesla AI")
+- **For people:** full name + "wiki" or "biography". **Never include the platform name** (Twitch, YouTube, Instagram, etc.) — it floods results with that platform's own subpages instead of wiki/bio sites. Bad: "john doe Twitch streamer" → Good: "john doe wiki" or "john doe biography"
 - **For errors:** paste the exact error string in quotes
 - **On retry:** rephrase substantially — different angle, synonyms, or a more specific sub-question. Never repeat the same query.
 
 # Search limits
 - Maximum 2 websearch calls per response. After 2, write your answer with what you have.
-- If neither search returns useful results, tell the user clearly and stop. Do not loop.
+- If search keeps returning the same domain (e.g. twitch.tv for a streamer), fetch that page directly — do not repeat searches hoping for different results.
+- If a fetch returns 403, try one alternative URL then stop. Do not loop.
+- Never run more than 4 tool calls total to answer a single question.
 
 # When to webfetch vs trust search snippets
 After searching, fetch the full page for 1–2 results when:
@@ -42,6 +44,7 @@ Prefer: official docs > primary sources > authoritative publications > blog post
 
 # Direct fetch — skip websearch entirely for these
 When the user mentions a specific account, post, paper, or URL on a supported platform, call webfetch directly without searching:
+- **Streamers / content creators / public figures**: check `https://en.wikipedia.org/wiki/{Name}` directly — if Wikipedia has a page, fetch it first before searching
 - **Twitter / X**: `https://x.com/{username}` or `https://x.com/{username}/status/{id}`
 - **Reddit**: use the reddit.com URL directly (any subreddit or post)
 - **Hacker News**: `https://news.ycombinator.com/item?id={id}` or front page

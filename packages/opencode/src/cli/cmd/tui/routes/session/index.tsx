@@ -2042,7 +2042,7 @@ function WebSearch(props: ToolProps<any>) {
         <Show
           when={isRunning()}
           fallback={
-            <text paddingLeft={3} fg={theme.textMuted}>
+            <text fg={theme.textMuted}>
               ~ {input.query}
             </text>
           }
@@ -2050,12 +2050,12 @@ function WebSearch(props: ToolProps<any>) {
           <Show
             when={kv.get("animations_enabled", true)}
             fallback={
-              <text paddingLeft={3} fg={theme.text}>
+              <text fg={theme.text}>
                 ~ Searching {input.query}
               </text>
             }
           >
-            <box flexDirection="row" gap={1} paddingLeft={3}>
+            <box flexDirection="row" gap={1}>
               <spinner frames={GLOBE_FRAMES} interval={300} color={theme.primary} />
               <spinner frames={WAVE_FRAMES} interval={120} color={theme.text} />
             </box>
@@ -2063,12 +2063,13 @@ function WebSearch(props: ToolProps<any>) {
         </Show>
       </box>
       <Show when={isCompleted() && urls().length > 0}>
-        <box paddingLeft={6} flexDirection="column">
+        <box paddingLeft={3} flexDirection="column">
           <For each={urls().slice(0, 6)}>
             {(u) => (
-              <text fg={theme.textMuted}>
-                <text fg={theme.accent}>· </text>{hostname(u.url)}
-              </text>
+              <box flexDirection="row">
+                <text fg={theme.accent}>· </text>
+                <text fg={theme.textMuted}>{hostname(u.url)}</text>
+              </box>
             )}
           </For>
         </box>
