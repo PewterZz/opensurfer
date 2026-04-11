@@ -1769,13 +1769,13 @@ function InlineTool(props: {
         </Match>
       </Switch>
       <Show when={error() && !denied()}>
-        <text fg={theme.textMuted} paddingLeft={3}>
-          {"couldn't complete · "}
-          <span fg={theme.error}>
+        <box paddingLeft={3} flexDirection="row">
+          <text fg={theme.textMuted}>{"couldn't complete · "}</text>
+          <text fg={theme.error}>
             {(error() ?? "").split("\n")[0].slice(0, 80)}
             {(error() ?? "").split("\n")[0].length > 80 ? "…" : ""}
-          </span>
-        </text>
+          </text>
+        </box>
       </Show>
     </box>
   )
@@ -1822,13 +1822,13 @@ function BlockTool(props: {
       </Show>
       {props.children}
       <Show when={error()}>
-        <text fg={theme.textMuted}>
-          {"couldn't complete · "}
-          <span fg={theme.error}>
+        <box flexDirection="row">
+          <text fg={theme.textMuted}>{"couldn't complete · "}</text>
+          <text fg={theme.error}>
             {(error() ?? "").split("\n")[0].slice(0, 80)}
             {(error() ?? "").split("\n")[0].length > 80 ? "…" : ""}
-          </span>
-        </text>
+          </text>
+        </box>
       </Show>
     </box>
   )
