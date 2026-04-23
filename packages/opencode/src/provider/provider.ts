@@ -18,6 +18,7 @@ import { Flag } from "../flag/flag"
 import { iife } from "@/util/iife"
 import { Global } from "../global"
 import path from "path"
+import fs from "node:fs"
 import { Filesystem } from "../util/filesystem"
 import { Effect, Layer, ServiceMap } from "effect"
 import { InstanceState } from "@/effect/instance-state"
@@ -34,6 +35,7 @@ import { createOpenAI } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
 import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import { createOpenaiCompatible as createGitHubCopilotOpenAICompatible } from "./sdk/copilot"
+import { createClaudeCli } from "./sdk/claude-cli"
 import { createXai } from "@ai-sdk/xai"
 import { createMistral } from "@ai-sdk/mistral"
 import { createGroq } from "@ai-sdk/groq"
@@ -147,6 +149,7 @@ export namespace Provider {
     "gitlab-ai-provider": createGitLab,
     "@ai-sdk/github-copilot": createGitHubCopilotOpenAICompatible,
     "venice-ai-sdk-provider": createVenice,
+    "claude-cli": createClaudeCli,
   }
 
   type CustomModelLoader = (sdk: any, modelID: string, options?: Record<string, any>) => Promise<any>
@@ -180,6 +183,11 @@ export namespace Provider {
             },
           },
         }),
+      "claude-cli": () =>
+        Effect.sync(() => ({
+          autoload: claudeBinaryAvailable(),
+          options: {},
+        })),
       opencode: Effect.fnUntraced(function* (input: Info) {
         const env = Env.all()
         const hasKey = iife(() => {
@@ -998,6 +1006,62 @@ export namespace Provider {
     return m
   }
 
+  function claudeBinaryAvailable(): boolean {
+    const PATH = Env.get("PATH") ?? ""
+    const sep = process.platform === "win32" ? ";" : ":"
+    const names = process.platform === "win32" ? ["claude.exe", "claude.cmd", "claude"] : ["claude"]
+    for (const dir of PATH.split(sep)) {
+      if (!dir) continue
+      for (const name of names) {
+        try {
+          if (fs.existsSync(path.join(dir, name))) return true
+        } catch {}
+      }
+    }
+    return false
+  }
+
+  function claudeCliDatabaseEntry(): Info {
+    const commonInput = { text: true, audio: false, image: true, video: false, pdf: true }
+    const commonOutput = { text: true, audio: false, image: false, video: false, pdf: false }
+    const zeroCost = { input: 0, output: 0, cache: { read: 0, write: 0 } }
+    const mkModel = (alias: string, name: string, family: string, context: number, output: number): Model => ({
+      id: ModelID.make(alias),
+      providerID: ProviderID.make("claude-cli"),
+      name,
+      family,
+      api: { id: alias, url: "", npm: "claude-cli" },
+      status: "active" as const,
+      headers: {},
+      options: {},
+      cost: zeroCost,
+      limit: { context, output },
+      capabilities: {
+        temperature: false,
+        reasoning: true,
+        attachment: true,
+        toolcall: true,
+        input: commonInput,
+        output: commonOutput,
+        interleaved: false,
+      },
+      release_date: "",
+      variants: {},
+    })
+    return {
+      id: ProviderID.make("claude-cli"),
+      source: "custom" as const,
+      name: "Claude CLI",
+      env: [],
+      options: {},
+      models: {
+        sonnet: mkModel("sonnet", "Claude Sonnet (CLI)", "claude", 200000, 32000),
+        opus: mkModel("opus", "Claude Opus (CLI)", "claude", 200000, 32000),
+        haiku: mkModel("haiku", "Claude Haiku (CLI)", "claude", 200000, 32000),
+      },
+    }
+  }
+
   export function fromModelsDevProvider(provider: ModelsDev.Provider): Info {
     const models: Record<string, Model> = {}
     for (const [key, model] of Object.entries(provider.models)) {
@@ -1040,6 +1104,7 @@ export namespace Provider {
           const cfg = yield* config.get()
           const modelsDev = yield* Effect.promise(() => ModelsDev.get())
           const database = mapValues(modelsDev, fromModelsDevProvider)
+          database["claude-cli"] = claudeCliDatabaseEntry()
 
           const providers: Record<ProviderID, Info> = {} as Record<ProviderID, Info>
           const languages = new Map<string, LanguageModelV3>()
